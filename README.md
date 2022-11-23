@@ -1,1 +1,1 @@
-# bridge-casper-smart-contracts
+# Ferrum Network Bridge - Casper Smart Contracts
