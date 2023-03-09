@@ -275,7 +275,7 @@ impl BrigdePool {
                 .into_hash()
                 .map(|hash_address| ContractPackageHash::new(hash_address))
                 .unwrap_or_revert_with(Error::InvalidContractPackageHash);
-        // self.approve_token(token, recipient, amount);
+        self.approve_token(token, recipient, amount);
         self.pay_to(
             token,
             crate::address::Address::ContractPackage(bridge_pool_contract_package_hash),
