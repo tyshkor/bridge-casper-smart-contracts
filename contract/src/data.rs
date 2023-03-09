@@ -231,8 +231,8 @@ impl BrigdePool {
             target_token_dict.set(target_network.to_string().as_str(), target_token.as_str());
 
             self.allowed_targets_dict.set(
-                token_contract_package_hash_string.as_str(),
                 target_token_dict_name,
+                target_token_dict_name.to_string(),
             );
         }
         Ok(())
@@ -241,19 +241,19 @@ impl BrigdePool {
     fn pay_to(
         &self,
         token: ContractPackageHash,
-        allower: Address,
+        owner: Address,
         recipient: Address,
         amount: U256,
     ) {
         let args = runtime_args! {
-            "owner" => allower,
+            "owner" => owner,
             "recipient" => recipient,
             "amount" => amount
         };
         runtime::call_versioned_contract::<()>(token, None, "transfer_from", args);
     }
 
-    fn pay_me(&self, token: ContractPackageHash, payer: Address, amount: U256) {
+    fn pay_me(&self, token: ContractPackageHash, spender: Address, amount: U256) {
         let bridge_pool_contract_package_hash =
             runtime::get_key("bridge_pool_contract_package_hash")
                 .unwrap_or_revert_with(Error::MissingContractPackageHash)
@@ -262,7 +262,7 @@ impl BrigdePool {
                 .unwrap_or_revert_with(Error::InvalidContractPackageHash);
         self.pay_to(
             token,
-            payer,
+            spender,
             crate::address::Address::ContractPackage(bridge_pool_contract_package_hash),
             amount,
         )
@@ -275,7 +275,7 @@ impl BrigdePool {
                 .into_hash()
                 .map(|hash_address| ContractPackageHash::new(hash_address))
                 .unwrap_or_revert_with(Error::InvalidContractPackageHash);
-        self.approve_token(token, recipient, amount);
+        self.approve_spender(token, recipient, amount);
         self.pay_to(
             token,
             crate::address::Address::ContractPackage(bridge_pool_contract_package_hash),
@@ -284,7 +284,7 @@ impl BrigdePool {
         )
     }
 
-    fn approve_token(&self, token: ContractPackageHash, spender: Address, amount: U256) {
+    fn approve_spender(&self, token: ContractPackageHash, spender: Address, amount: U256) {
         let args = runtime_args! {
             "spender" => spender,
             "amount" => amount
