@@ -16,6 +16,14 @@ pub enum Error {
     InvalidContractHash = 11,
     WithdrawCheckErrorEarly = 12,
     WithdrawCheckError = 13,
+    NeitherAccountHashNorNeitherContractPackageHash = 14,
+    UnexpectedContractHash = 15,
+    NotContractPackageHash = 16,
+    DictTargetTokenNotEqualTargetToken = 17,
+    NoTargetNetworkDictForThisToken = 18,
+    NoTargetTokenInAllowedTargetsDict = 19,
+    ClientDoesNotHaveAnyKindOfLioquidity = 20,
+    ClientDoesNotHaveSpecificKindOfLioquidity = 21,
 }
 
 impl From<Error> for ApiError {

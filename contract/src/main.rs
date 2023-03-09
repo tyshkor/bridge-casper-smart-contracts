@@ -6,9 +6,10 @@ compile_error!("target arch should be wasm32: compile with '--target wasm32-unkn
 
 extern crate alloc;
 
+use crate::runtime_args::RuntimeArgs;
 use alloc::{
     string::{String, ToString},
-    vec
+    vec,
 };
 use bridge_pool::bridge_pool_contract::BridgePoolContract;
 use casper_contract::{
@@ -16,9 +17,8 @@ use casper_contract::{
     unwrap_or_revert::UnwrapOrRevert,
 };
 use casper_types::{
-    api_error::ApiError,
     contracts::{EntryPoint, EntryPointAccess, EntryPointType, EntryPoints, NamedKeys},
-    CLType, CLValue, URef, U256, CLTyped, Parameter,
+    runtime_args, CLType, CLTyped, CLValue, ContractPackageHash, Key, Parameter, U256,
 };
 use contract_utils::{ContractContext, OnChainContractStorage};
 
@@ -28,7 +28,6 @@ const ENTRY_POINT_REMOVE_LIQUIDITY: &str = "remove_liquidity";
 const ENTRY_POINT_SWAP: &str = "swap";
 
 const CONTRACT_VERSION_KEY: &str = "version";
-const LIQUIDITY_KEY: &str = "liquidity";
 const CONTRACT_KEY: &str = "bridge_pool";
 
 #[derive(Default)]
@@ -50,12 +49,20 @@ impl Contract {
 
 #[no_mangle]
 pub extern "C" fn constructor() {
+    let bridge_pool_contract_package_hash =
+        runtime::get_named_arg::<Key>("bridge_pool_contract_package_hash");
+
+    runtime::put_key(
+        "bridge_pool_contract_package_hash",
+        bridge_pool_contract_package_hash.into(),
+    );
+
     Contract::default().constructor();
 }
 
 #[no_mangle]
 pub extern "C" fn get_liquidity() {
-    let token_address = runtime::get_named_arg::<String>("token");
+    let token_address = runtime::get_named_arg::<String>("token_address");
     let result = Contract::default()
         .get_liquidity(token_address)
         .unwrap_or_revert();
@@ -87,32 +94,34 @@ pub extern "C" fn remove_liquidity() {
 #[no_mangle]
 pub extern "C" fn swap() {
     let amount = runtime::get_named_arg::<U256>("amount");
-    let token_address = runtime::get_named_arg::<String>("token");
+    let token_address = runtime::get_named_arg::<String>("token_address");
+    let target_network = runtime::get_named_arg::<U256>("target_network");
+    let target_token = runtime::get_named_arg::<String>("target_token");
     let ret = Contract::default()
-        .swap(amount, token_address)
+        .swap(token_address, amount, target_network, target_token)
         .unwrap_or_revert();
     runtime::ret(CLValue::from_t(ret).unwrap_or_revert());
 }
 
 #[no_mangle]
 pub extern "C" fn call() {
-    // Initialize the count to 0 locally
-    let count_start = storage::new_uref(0_i32);
-
-    // In the named keys of the contract, add a key for the count
-    let mut counter_named_keys = NamedKeys::new();
-    let key_name = String::from(LIQUIDITY_KEY);
-    counter_named_keys.insert(key_name, count_start.into());
+    let bridge_pool_named_keys = NamedKeys::new();
 
     // Create entry points for this contract
     let mut bridge_pool_entry_points = EntryPoints::new();
 
     bridge_pool_entry_points.add_entry_point(EntryPoint::new(
+        "constructor",
+        vec![],
+        <()>::cl_type(),
+        EntryPointAccess::Public,
+        EntryPointType::Contract,
+    ));
+
+    bridge_pool_entry_points.add_entry_point(EntryPoint::new(
         ENTRY_POINT_GET_LIQUIDITY,
-        vec![
-            Parameter::new("token_address", String::cl_type()),
-        ],
-        CLType::I32,
+        vec![Parameter::new("token_address", String::cl_type())],
+        CLType::U256,
         EntryPointAccess::Public,
         EntryPointType::Contract,
     ));
@@ -121,7 +130,7 @@ pub extern "C" fn call() {
         ENTRY_POINT_ADD_LIQUIDITY,
         vec![
             Parameter::new("amount", U256::cl_type()),
-            Parameter::new("token_address", String::cl_type()), 
+            Parameter::new("token_address", String::cl_type()),
         ],
         CLType::Unit,
         EntryPointAccess::Public,
@@ -132,7 +141,7 @@ pub extern "C" fn call() {
         ENTRY_POINT_REMOVE_LIQUIDITY,
         vec![
             Parameter::new("amount", U256::cl_type()),
-            Parameter::new("token_address", String::cl_type()), 
+            Parameter::new("token_address", String::cl_type()),
         ],
         CLType::Unit,
         EntryPointAccess::Public,
@@ -150,9 +159,26 @@ pub extern "C" fn call() {
     // Create a new contract package that can be upgraded
     let (stored_contract_hash, contract_version) = storage::new_contract(
         bridge_pool_entry_points,
-        Some(counter_named_keys),
+        Some(bridge_pool_named_keys),
         Some("bridge_pool_package_name".to_string()),
         Some("bridge_pool_access_uref".to_string()),
+    );
+
+    let package_hash: ContractPackageHash = ContractPackageHash::new(
+        runtime::get_key("contract_package_hash")
+            .unwrap_or_revert()
+            .into_hash()
+            .unwrap_or_revert(),
+    );
+
+    let package_hash_key: Key = package_hash.into();
+
+    let _: () = runtime::call_contract(
+        stored_contract_hash,
+        "constructor",
+        runtime_args! {
+            "bridge_pool_contract_package_hash" => package_hash_key,
+        },
     );
 
     /* To create a locked contract instead, use new_locked_contract and throw away the contract version returned

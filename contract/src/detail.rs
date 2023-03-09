@@ -10,6 +10,7 @@ use casper_types::{bytesrepr::FromBytes, system::CallStackElement, ApiError, CLT
 use crate::address::Address;
 use crate::error::Error;
 
+#[allow(unused)]
 /// Gets [`URef`] under a name.
 pub(crate) fn get_uref(name: &str) -> URef {
     let key = runtime::get_key(name)
@@ -18,6 +19,7 @@ pub(crate) fn get_uref(name: &str) -> URef {
     key.try_into().unwrap_or_revert()
 }
 
+#[allow(unused)]
 /// Reads value from a named key.
 pub(crate) fn read_from<T>(name: &str) -> T
 where
@@ -63,6 +65,7 @@ pub(crate) fn get_immediate_caller_address() -> Result<Address, Error> {
         .ok_or(Error::InvalidContext)
 }
 
+#[allow(unused)]
 /// Gets the caller address which is stored on the top of the call stack.
 ///
 /// This is similar to what [`runtime::get_caller`] does but it also supports stored contracts.

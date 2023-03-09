@@ -1,5 +1,8 @@
 //! Implementation of an `Address` which refers either an account hash, or a contract hash.
-use alloc::vec::Vec;
+use alloc::{
+    string::{String, ToString},
+    vec::Vec,
+};
 use casper_types::{
     account::AccountHash,
     bytesrepr::{self, FromBytes, ToBytes},
@@ -46,6 +49,20 @@ impl From<ContractPackageHash> for Address {
 impl From<AccountHash> for Address {
     fn from(account_hash: AccountHash) -> Self {
         Self::Account(account_hash)
+    }
+}
+
+impl TryInto<String> for Address {
+    type Error = crate::error::Error;
+
+    fn try_into(self) -> Result<String, Self::Error> {
+        if let Some(account_hash) = self.as_account_hash() {
+            Ok(account_hash.to_string())
+        } else if let Some(contract_package_hash) = self.as_contract_package_hash() {
+            Ok(contract_package_hash.to_string())
+        } else {
+            Err(Self::Error::NeitherAccountHashNorNeitherContractPackageHash)
+        }
     }
 }
 
