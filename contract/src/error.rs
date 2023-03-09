@@ -24,6 +24,7 @@ pub enum Error {
     NoTargetTokenInAllowedTargetsDict = 19,
     ClientDoesNotHaveAnyKindOfLioquidity = 20,
     ClientDoesNotHaveSpecificKindOfLioquidity = 21,
+    AlreadyInThisTargetTokenDict = 22,
 }
 
 impl From<Error> for ApiError {

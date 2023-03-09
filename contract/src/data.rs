@@ -202,6 +202,42 @@ impl BrigdePool {
         Ok(())
     }
 
+    pub fn allow_target(
+        &self,
+        token_contract_package_hash: ContractPackageHash,
+        target_token: String,
+        target_network: U256,
+    ) -> Result<(), Error> {
+        let token_contract_package_hash_string = token_contract_package_hash.to_string();
+        if let Some(target_token_dict_address) = self
+            .allowed_targets_dict
+            .get::<String>(token_contract_package_hash_string.as_str())
+        {
+            let target_token_dict = Dict::instance(target_token_dict_address.as_str());
+            if target_token_dict
+                .get::<String>(&target_network.to_string())
+                .is_some()
+            {
+                return Err(Error::AlreadyInThisTargetTokenDict);
+            } else {
+                target_token_dict.set(&target_network.to_string(), target_token)
+            }
+        } else {
+            let target_token_dict_name_string = token_contract_package_hash.to_string();
+            let target_token_dict_name = target_token_dict_name_string.as_str();
+            Dict::init(target_token_dict_name);
+
+            let target_token_dict = Dict::instance(target_token_dict_name);
+            target_token_dict.set(target_network.to_string().as_str(), target_token.as_str());
+
+            self.allowed_targets_dict.set(
+                token_contract_package_hash_string.as_str(),
+                target_token_dict_name,
+            );
+        }
+        Ok(())
+    }
+
     fn pay_to(
         &self,
         token: ContractPackageHash,

@@ -105,4 +105,18 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
         });
         Ok(())
     }
+
+    fn allow_target(
+        &mut self,
+        token_address: String,
+        target_network: U256,
+        target_token: String,
+    ) -> Result<(), Error> {
+        let token = ContractPackageHash::from_formatted_str(token_address.as_str())
+            .map_err(|_| Error::NotContractPackageHash)?;
+
+        let bridge_pool_instance = BrigdePool::instance();
+        bridge_pool_instance.allow_target(token, target_token.clone(), target_network)?;
+        Ok(())
+    }
 }
