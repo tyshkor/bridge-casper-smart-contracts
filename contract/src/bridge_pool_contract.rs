@@ -1,3 +1,4 @@
+use crate::address::Address;
 use crate::detail;
 use crate::{
     data::{self, BrigdePool},
@@ -6,6 +7,7 @@ use crate::{
 };
 use alloc::string::String;
 use casper_contract::unwrap_or_revert::UnwrapOrRevert;
+use casper_types::account::AccountHash;
 use casper_types::{ContractPackageHash, U256};
 use contract_utils::{ContractContext, ContractStorage};
 
@@ -134,8 +136,11 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
         let token = ContractPackageHash::from_formatted_str(token_address.as_str())
             .map_err(|_| Error::NotContractPackageHash)?;
 
+        let payee_account_hash: AccountHash = AccountHash::from_formatted_str(&payee).map_err(|_| Error::CasperAccountHashParsing)?;
+        let payee_address: Address = From::from(payee_account_hash);
+
         let bridge_pool_instance = BrigdePool::instance();
-        bridge_pool_instance.withdraw_signed(token, payee.clone(), amount, salt, signature)?;
+        bridge_pool_instance.withdraw_signed(token, payee_address, amount, salt, signature)?;
         self.emit(BridgePoolEvent::TransferBySignature {
             signer: actor,
             reciever: payee,

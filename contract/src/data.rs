@@ -19,9 +19,9 @@ use contract_utils::{get_key, set_key, Dict};
 
 const ACCOUNT_HASH_LIQUIDITIES_DICT: &str = "account_hash_liquidities_dict";
 const HASH_ADDR_LIQUIDITIES_DICT: &str = "hash_addr_liquidities_dict";
-
-// const FEES_DICT: &str = "fees_dict";
 const ALLOWED_TARGETS_DICT: &str = "allowed_targets_dict";
+const USED_HASHES_DICT: &str = "used_hashes_dict";
+const SIGNERS_DICT: &str = "signers_dict";
 
 const CONTRACT_PACKAGE_HASH: &str = "contract_package_hash";
 
@@ -32,8 +32,9 @@ const WITHDRAW_SIGNED_FUNCTION_NAME: &str = "withdraw_signed";
 pub struct BrigdePool {
     account_hash_liquidities_dict: Dict,
     hash_addr_liquidities_dict: Dict,
-    // fees_dict: Dict,
     allowed_targets_dict: Dict,
+    used_hashes_dict: Dict,
+    signers_dict: Dict,
 }
 
 impl BrigdePool {
@@ -41,16 +42,18 @@ impl BrigdePool {
         BrigdePool {
             account_hash_liquidities_dict: Dict::instance(ACCOUNT_HASH_LIQUIDITIES_DICT),
             hash_addr_liquidities_dict: Dict::instance(HASH_ADDR_LIQUIDITIES_DICT),
-            // fees_dict: Dict::instance(FEES_DICT),
             allowed_targets_dict: Dict::instance(ALLOWED_TARGETS_DICT),
+            used_hashes_dict: Dict::instance(USED_HASHES_DICT),
+            signers_dict: Dict::instance(SIGNERS_DICT),
         }
     }
 
     pub fn init() {
         Dict::init(ACCOUNT_HASH_LIQUIDITIES_DICT);
         Dict::init(HASH_ADDR_LIQUIDITIES_DICT);
-        // Dict::init(FEES_DICT);
         Dict::init(ALLOWED_TARGETS_DICT);
+        Dict::init(USED_HASHES_DICT);
+        Dict::init(SIGNERS_DICT);
     }
 
     pub fn get_liquidity_added_by_client(
@@ -176,39 +179,70 @@ impl BrigdePool {
     pub fn withdraw_signed(
         &self,
         token_contract_package_hash: ContractPackageHash,
-        payee: String,
+        payee: Address,
         amount: U256,
         salt: [u8; 32],
         signature: alloc::vec::Vec<u8>,
     ) -> Result<(), Error> {
-        // self.pay_from_me(token_contract_package_hash, client_address, amount);
-        // let dict = match client_address {
-        //     Address::Account(_) => &self.account_hash_liquidities_dict,
-        //     Address::ContractPackage(_) => &self.hash_addr_liquidities_dict,
-        //     Address::ContractHash(_) => return Err(Error::UnexpectedContractHash),
-        // };
-        // self.remove_liquidity_generic(
-        //     token_contract_package_hash.to_string(),
-        //     client_string,
-        //     amount,
-        //     dict,
-        // )?;
+        let payee_string = payee.as_account_hash().unwrap().to_string();
+        let message = self.withdraw_signed_message(token_contract_package_hash, payee_string.clone(), amount, salt);
+        let signer = self.signer_unique(message, signature)?;
+
+        if !self.signers_dict.get::<bool>(signer.as_str()).ok_or(Error::NoValueInSignersDict)? {
+            return Err(Error::InvalidSigner)
+        }
+        self.pay_from_me(token_contract_package_hash, payee, amount);
+        let dict = match payee {
+            Address::Account(_) => &self.account_hash_liquidities_dict,
+            Address::ContractPackage(_) => &self.hash_addr_liquidities_dict,
+            Address::ContractHash(_) => return Err(Error::UnexpectedContractHash),
+        };
+        self.remove_liquidity_generic(
+            token_contract_package_hash.to_string(),
+            payee_string,
+            amount,
+            dict,
+        )?;
         Ok(())
     }
 
-    
-    // pub fn withdraw_signed_message(&self,
-    //     token_contract_package_hash: ContractPackageHash,
-    //     payee: String,
-    //     amount: U256,
-    //     salt: [u8; 32]) -> [u8; 32] {
-    //         let params = vec![
-    //             Token::Address("0x7E5F4552091A69125d5DfCb7b8C2659029395Bdf".parse().unwrap()),
-    //             Token::Uint(256.into()),
-    //         ];
-        
-    //         let encoded = encode(&[WITHDRAW_SIGNED_FUNCTION_NAME], &params);
-    // }
+    pub fn withdraw_signed_message(
+        &self,
+        token_contract_package_hash: ContractPackageHash,
+        payee: String,
+        amount: U256,
+        salt: [u8; 32],
+    ) -> [u8; 32] {
+        let contract_package_hash_bytes = token_contract_package_hash.as_bytes();
+        let payee_bytes = payee.as_bytes();
+        let amount_string = amount.to_string();
+        let amount_bytes = amount_string.as_bytes();
+
+        let concatenated: Vec<u8> = [
+            contract_package_hash_bytes,
+            payee_bytes,
+            amount_bytes,
+            &salt[..],
+        ]
+        .concat();
+        let data = &concatenated[..];
+        contract_utils::keccak::keccak256(data)
+    }
+
+    pub fn signer_unique(&self, message: [u8; 32], signature: alloc::vec::Vec<u8>) -> Result<String, Error> {
+        let (digest, signer_string) = self.signer(message, signature);
+
+        if self.hash_addr_liquidities_dict.get::<bool>(alloc::format!("{:#?}", digest).as_str()).is_some() {
+            return Err(Error::MessageAlreadyUsed);
+        } else {
+            self.hash_addr_liquidities_dict.set(alloc::format!("{:#?}", digest).as_str(), true);
+        }
+        Ok(signer_string)
+    }
+
+    pub fn signer(&self, message: [u8; 32], signature: alloc::vec::Vec<u8>) -> ([u8; 32], String) {
+        ([0; 32], "".to_string())
+    }
 
     pub fn swap(
         &self,
@@ -268,21 +302,13 @@ impl BrigdePool {
             let target_token_dict = Dict::instance(target_token_dict_name);
             target_token_dict.set(target_network.to_string().as_str(), target_token.as_str());
 
-            self.allowed_targets_dict.set(
-                target_token_dict_name,
-                target_token_dict_name.to_string(),
-            );
+            self.allowed_targets_dict
+                .set(target_token_dict_name, target_token_dict_name.to_string());
         }
         Ok(())
     }
 
-    fn pay_to(
-        &self,
-        token: ContractPackageHash,
-        owner: Address,
-        recipient: Address,
-        amount: U256,
-    ) {
+    fn pay_to(&self, token: ContractPackageHash, owner: Address, recipient: Address, amount: U256) {
         let args = runtime_args! {
             "owner" => owner,
             "recipient" => recipient,
@@ -442,7 +468,7 @@ pub fn emit(event: &BridgePoolEvent) {
             };
             param.insert("amount", amount.to_string());
             events.push(param);
-        },
+        }
         BridgePoolEvent::TransferBySignature {
             signer,
             reciever,

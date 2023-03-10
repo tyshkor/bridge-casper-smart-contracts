@@ -25,6 +25,10 @@ pub enum Error {
     ClientDoesNotHaveAnyKindOfLioquidity = 20,
     ClientDoesNotHaveSpecificKindOfLioquidity = 21,
     AlreadyInThisTargetTokenDict = 22,
+    MessageAlreadyUsed = 23,
+    NoValueInSignersDict = 24,
+    InvalidSigner = 25,
+    CasperAccountHashParsing = 26,
 }
 
 impl From<Error> for ApiError {
