@@ -1,6 +1,7 @@
 use crate::address::Address;
 use crate::error::Error;
 use crate::event::BridgePoolEvent;
+use crate::alloc::borrow::ToOwned;
 use alloc::{
     collections::BTreeMap,
     string::{String, ToString},
@@ -283,7 +284,7 @@ impl BrigdePool {
         let token_contract_package_hash_string = token_contract_package_hash.to_string();
         if let Some(target_token_dict_address) = self
             .allowed_targets_dict
-            .get::<String>(token_contract_package_hash_string.as_str())
+            .get::<String>(&(ALLOWED_TARGETS_DICT.to_owned() + token_contract_package_hash_string.as_str()))
         {
             let target_token_dict = Dict::instance(target_token_dict_address.as_str());
             if target_token_dict
@@ -296,7 +297,7 @@ impl BrigdePool {
             }
         } else {
             let target_token_dict_name_string = token_contract_package_hash.to_string();
-            let target_token_dict_name = target_token_dict_name_string.as_str();
+            let target_token_dict_name: &str = &(ALLOWED_TARGETS_DICT.to_owned() + target_token_dict_name_string.as_str());
             Dict::init(target_token_dict_name);
 
             let target_token_dict = Dict::instance(target_token_dict_name);
