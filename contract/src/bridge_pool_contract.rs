@@ -136,7 +136,8 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
         let token = ContractPackageHash::from_formatted_str(token_address.as_str())
             .map_err(|_| Error::NotContractPackageHash)?;
 
-        let payee_account_hash: AccountHash = AccountHash::from_formatted_str(&payee).map_err(|_| Error::CasperAccountHashParsing)?;
+        let payee_account_hash: AccountHash =
+            AccountHash::from_formatted_str(&payee).map_err(|_| Error::CasperAccountHashParsing)?;
         let payee_address: Address = From::from(payee_account_hash);
 
         let bridge_pool_instance = BrigdePool::instance();

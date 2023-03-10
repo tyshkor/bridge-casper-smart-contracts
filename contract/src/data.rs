@@ -1,7 +1,7 @@
 use crate::address::Address;
+use crate::alloc::borrow::ToOwned;
 use crate::error::Error;
 use crate::event::BridgePoolEvent;
-use crate::alloc::borrow::ToOwned;
 use alloc::{
     collections::BTreeMap,
     string::{String, ToString},
@@ -186,11 +186,20 @@ impl BrigdePool {
         signature: alloc::vec::Vec<u8>,
     ) -> Result<(), Error> {
         let payee_string = payee.as_account_hash().unwrap().to_string();
-        let message = self.withdraw_signed_message(token_contract_package_hash, payee_string.clone(), amount, salt);
+        let message = self.withdraw_signed_message(
+            token_contract_package_hash,
+            payee_string.clone(),
+            amount,
+            salt,
+        );
         let signer = self.signer_unique(message, signature)?;
 
-        if !self.signers_dict.get::<bool>(signer.as_str()).ok_or(Error::NoValueInSignersDict)? {
-            return Err(Error::InvalidSigner)
+        if !self
+            .signers_dict
+            .get::<bool>(signer.as_str())
+            .ok_or(Error::NoValueInSignersDict)?
+        {
+            return Err(Error::InvalidSigner);
         }
         self.pay_from_me(token_contract_package_hash, payee, amount);
         let dict = match payee {
@@ -230,13 +239,22 @@ impl BrigdePool {
         contract_utils::keccak::keccak256(data)
     }
 
-    pub fn signer_unique(&self, message: [u8; 32], signature: alloc::vec::Vec<u8>) -> Result<String, Error> {
+    pub fn signer_unique(
+        &self,
+        message: [u8; 32],
+        signature: alloc::vec::Vec<u8>,
+    ) -> Result<String, Error> {
         let (digest, signer_string) = self.signer(message, signature);
 
-        if self.hash_addr_liquidities_dict.get::<bool>(alloc::format!("{:#?}", digest).as_str()).is_some() {
+        if self
+            .hash_addr_liquidities_dict
+            .get::<bool>(alloc::format!("{:#?}", digest).as_str())
+            .is_some()
+        {
             return Err(Error::MessageAlreadyUsed);
         } else {
-            self.hash_addr_liquidities_dict.set(alloc::format!("{:#?}", digest).as_str(), true);
+            self.hash_addr_liquidities_dict
+                .set(alloc::format!("{:#?}", digest).as_str(), true);
         }
         Ok(signer_string)
     }
@@ -282,10 +300,9 @@ impl BrigdePool {
         target_network: U256,
     ) -> Result<(), Error> {
         let token_contract_package_hash_string = token_contract_package_hash.to_string();
-        if let Some(target_token_dict_address) = self
-            .allowed_targets_dict
-            .get::<String>(&(ALLOWED_TARGETS_DICT.to_owned() + token_contract_package_hash_string.as_str()))
-        {
+        if let Some(target_token_dict_address) = self.allowed_targets_dict.get::<String>(
+            &(ALLOWED_TARGETS_DICT.to_owned() + token_contract_package_hash_string.as_str()),
+        ) {
             let target_token_dict = Dict::instance(target_token_dict_address.as_str());
             if target_token_dict
                 .get::<String>(&target_network.to_string())
@@ -297,7 +314,8 @@ impl BrigdePool {
             }
         } else {
             let target_token_dict_name_string = token_contract_package_hash.to_string();
-            let target_token_dict_name: &str = &(ALLOWED_TARGETS_DICT.to_owned() + target_token_dict_name_string.as_str());
+            let target_token_dict_name: &str =
+                &(ALLOWED_TARGETS_DICT.to_owned() + target_token_dict_name_string.as_str());
             Dict::init(target_token_dict_name);
 
             let target_token_dict = Dict::instance(target_token_dict_name);
