@@ -119,4 +119,29 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
         bridge_pool_instance.allow_target(token, target_token.clone(), target_network)?;
         Ok(())
     }
+
+    fn withdraw_signed(
+        &mut self,
+        token_address: String,
+        payee: String,
+        amount: U256,
+        salt: [u8; 32],
+        signature: alloc::vec::Vec<u8>,
+    ) -> Result<(), Error> {
+        let actor =
+            detail::get_immediate_caller_address().unwrap_or_revert_with(Error::NegativeReward);
+
+        let token = ContractPackageHash::from_formatted_str(token_address.as_str())
+            .map_err(|_| Error::NotContractPackageHash)?;
+
+        let bridge_pool_instance = BrigdePool::instance();
+        bridge_pool_instance.withdraw_signed(token, payee.clone(), amount, salt, signature)?;
+        self.emit(BridgePoolEvent::TransferBySignature {
+            signer: actor,
+            reciever: payee,
+            token,
+            amount,
+        });
+        Ok(())
+    }
 }

@@ -27,6 +27,7 @@ const CONTRACT_PACKAGE_HASH: &str = "contract_package_hash";
 
 const NAME: &str = "name";
 const ADDRESS: &str = "address";
+const WITHDRAW_SIGNED_FUNCTION_NAME: &str = "withdraw_signed";
 
 pub struct BrigdePool {
     account_hash_liquidities_dict: Dict,
@@ -171,6 +172,43 @@ impl BrigdePool {
             Err(Error::ClientDoesNotHaveAnyKindOfLioquidity)
         }
     }
+
+    pub fn withdraw_signed(
+        &self,
+        token_contract_package_hash: ContractPackageHash,
+        payee: String,
+        amount: U256,
+        salt: [u8; 32],
+        signature: alloc::vec::Vec<u8>,
+    ) -> Result<(), Error> {
+        // self.pay_from_me(token_contract_package_hash, client_address, amount);
+        // let dict = match client_address {
+        //     Address::Account(_) => &self.account_hash_liquidities_dict,
+        //     Address::ContractPackage(_) => &self.hash_addr_liquidities_dict,
+        //     Address::ContractHash(_) => return Err(Error::UnexpectedContractHash),
+        // };
+        // self.remove_liquidity_generic(
+        //     token_contract_package_hash.to_string(),
+        //     client_string,
+        //     amount,
+        //     dict,
+        // )?;
+        Ok(())
+    }
+
+    
+    // pub fn withdraw_signed_message(&self,
+    //     token_contract_package_hash: ContractPackageHash,
+    //     payee: String,
+    //     amount: U256,
+    //     salt: [u8; 32]) -> [u8; 32] {
+    //         let params = vec![
+    //             Token::Address("0x7E5F4552091A69125d5DfCb7b8C2659029395Bdf".parse().unwrap()),
+    //             Token::Uint(256.into()),
+    //         ];
+        
+    //         let encoded = encode(&[WITHDRAW_SIGNED_FUNCTION_NAME], &params);
+    // }
 
     pub fn swap(
         &self,
@@ -402,6 +440,21 @@ pub fn emit(event: &BridgePoolEvent) {
                         .to_string(),
                 );
             };
+            param.insert("amount", amount.to_string());
+            events.push(param);
+        },
+        BridgePoolEvent::TransferBySignature {
+            signer,
+            reciever,
+            token,
+            amount,
+        } => {
+            let mut param = BTreeMap::new();
+            param.insert(CONTRACT_PACKAGE_HASH, package.to_string());
+            param.insert("event_type", "bridge_transfer_by_signature".to_string());
+            param.insert("signer", signer.as_account_hash().unwrap().to_string());
+            param.insert("token", token.to_string());
+            param.insert("reciever", reciever.to_string());
             param.insert("amount", amount.to_string());
             events.push(param);
         }

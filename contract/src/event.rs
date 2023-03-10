@@ -23,4 +23,10 @@ pub enum BridgePoolEvent {
         target_address: Address,
         amount: U256,
     },
+    TransferBySignature {
+        signer: Address,
+        reciever: String,
+        token: ContractPackageHash,
+        amount: U256,
+    },
 }
