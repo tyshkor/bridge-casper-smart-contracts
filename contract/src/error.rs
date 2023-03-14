@@ -29,6 +29,8 @@ pub enum Error {
     NoValueInSignersDict = 24,
     InvalidSigner = 25,
     CasperAccountHashParsing = 26,
+    WrongTokenName = 27,
+    NoTokenInTokenContractPackageHashDict = 28,
 }
 
 impl From<Error> for ApiError {

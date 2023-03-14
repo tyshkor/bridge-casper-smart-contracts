@@ -108,10 +108,11 @@ pub extern "C" fn swap() {
 #[no_mangle]
 pub extern "C" fn allow_target() {
     let token_address = runtime::get_named_arg::<String>("token_address");
+    let token_name = runtime::get_named_arg::<String>("token_name");
     let target_network = runtime::get_named_arg::<U256>("target_network");
     let target_token = runtime::get_named_arg::<String>("target_token");
     let ret = Contract::default()
-        .allow_target(token_address, target_network, target_token)
+        .allow_target(token_address, token_name, target_network, target_token)
         .unwrap_or_revert();
     runtime::ret(CLValue::from_t(ret).unwrap_or_revert());
 }
@@ -191,6 +192,7 @@ pub extern "C" fn call() {
         ENTRY_POINT_ALLOW_TARGET,
         vec![
             Parameter::new("token_address", String::cl_type()),
+            Parameter::new("token_name", String::cl_type()),
             Parameter::new("target_network", U256::cl_type()),
             Parameter::new("target_token", String::cl_type()),
         ],

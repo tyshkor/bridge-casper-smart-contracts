@@ -23,6 +23,7 @@ const HASH_ADDR_LIQUIDITIES_DICT: &str = "hash_addr_liquidities_dict";
 const ALLOWED_TARGETS_DICT: &str = "allowed_targets_dict";
 const USED_HASHES_DICT: &str = "used_hashes_dict";
 const SIGNERS_DICT: &str = "signers_dict";
+const TOKEN_CONTRACT_PACKAGE_HASH_DICT_NAME: &str = "token_contract_package_hash_dict_name";
 
 const CONTRACT_PACKAGE_HASH: &str = "contract_package_hash";
 
@@ -36,6 +37,7 @@ pub struct BrigdePool {
     allowed_targets_dict: Dict,
     used_hashes_dict: Dict,
     signers_dict: Dict,
+    token_contract_package_hash_dict_name: Dict,
 }
 
 impl BrigdePool {
@@ -46,6 +48,7 @@ impl BrigdePool {
             allowed_targets_dict: Dict::instance(ALLOWED_TARGETS_DICT),
             used_hashes_dict: Dict::instance(USED_HASHES_DICT),
             signers_dict: Dict::instance(SIGNERS_DICT),
+            token_contract_package_hash_dict_name: Dict::instance(TOKEN_CONTRACT_PACKAGE_HASH_DICT_NAME),
         }
     }
 
@@ -55,6 +58,7 @@ impl BrigdePool {
         Dict::init(ALLOWED_TARGETS_DICT);
         Dict::init(USED_HASHES_DICT);
         Dict::init(SIGNERS_DICT);
+        Dict::init(TOKEN_CONTRACT_PACKAGE_HASH_DICT_NAME);
     }
 
     pub fn get_liquidity_added_by_client(
@@ -272,50 +276,77 @@ impl BrigdePool {
         target_network: U256,
     ) -> Result<(), Error> {
         let token_contract_package_hash_string = token_contract_package_hash.to_string();
-        if let Some(target_token_dict_address) = self
-            .allowed_targets_dict
+        if let Some(token_name_from_dict) = self
+            .token_contract_package_hash_dict_name
             .get::<String>(token_contract_package_hash_string.as_str())
         {
-            let target_token_dict = Dict::instance(target_token_dict_address.as_str());
-            if let Some(dict_target_token) =
-                target_token_dict.get::<String>(&target_network.to_string())
+            if let Some(target_token_dict_address) = self
+                .allowed_targets_dict
+                .get::<String>(&(ALLOWED_TARGETS_DICT.to_owned() + token_name_from_dict.as_str()))
             {
-                if dict_target_token != target_token {
-                    return Err(Error::DictTargetTokenNotEqualTargetToken);
+                let target_token_dict = Dict::instance(target_token_dict_address.as_str());
+                if let Some(dict_target_token) =
+                    target_token_dict.get::<String>(&target_network.to_string())
+                {
+                    if dict_target_token != target_token {
+                        return Err(Error::DictTargetTokenNotEqualTargetToken);
+                    }
+                } else {
+                    return Err(Error::NoTargetNetworkDictForThisToken);
                 }
             } else {
-                return Err(Error::NoTargetNetworkDictForThisToken);
+                return Err(Error::NoTargetTokenInAllowedTargetsDict);
             }
+            self.pay_me(token_contract_package_hash, from_address, amount);
+            Ok(())
         } else {
-            return Err(Error::NoTargetTokenInAllowedTargetsDict);
+            return Err(Error::NoTokenInTokenContractPackageHashDict);
         }
-        self.pay_me(token_contract_package_hash, from_address, amount);
-        Ok(())
     }
 
     pub fn allow_target(
         &self,
         token_contract_package_hash: ContractPackageHash,
+        token_name: String,
         target_token: String,
         target_network: U256,
     ) -> Result<(), Error> {
         let token_contract_package_hash_string = token_contract_package_hash.to_string();
-        if let Some(target_token_dict_address) = self.allowed_targets_dict.get::<String>(
-            &(ALLOWED_TARGETS_DICT.to_owned() + token_contract_package_hash_string.as_str()),
-        ) {
-            let target_token_dict = Dict::instance(target_token_dict_address.as_str());
-            if target_token_dict
-                .get::<String>(&target_network.to_string())
-                .is_some()
-            {
-                return Err(Error::AlreadyInThisTargetTokenDict);
+        if let Some(token_name_from_dict) = self
+            .token_contract_package_hash_dict_name
+            .get::<String>(token_contract_package_hash_string.as_str())
+        {
+            if token_name != token_name_from_dict {
+                return Err(Error::WrongTokenName);
+            }
+            if let Some(target_token_dict_address) = self.allowed_targets_dict.get::<String>(
+                &(ALLOWED_TARGETS_DICT.to_owned() + token_name.as_str()),
+            ) {
+                let target_token_dict = Dict::instance(target_token_dict_address.as_str());
+                if target_token_dict
+                    .get::<String>(&target_network.to_string())
+                    .is_some()
+                {
+                    return Err(Error::AlreadyInThisTargetTokenDict);
+                } else {
+                    target_token_dict.set(&target_network.to_string(), target_token)
+                }
             } else {
-                target_token_dict.set(&target_network.to_string(), target_token)
+                let target_token_dict_name: &str =
+                    &(ALLOWED_TARGETS_DICT.to_owned() + token_name.as_str());
+                Dict::init(target_token_dict_name);
+    
+                let target_token_dict = Dict::instance(target_token_dict_name);
+                target_token_dict.set(target_network.to_string().as_str(), target_token.as_str());
+    
+                self.allowed_targets_dict
+                    .set(target_token_dict_name, target_token_dict_name.to_string());
             }
         } else {
-            let target_token_dict_name_string = token_contract_package_hash.to_string();
+            self.token_contract_package_hash_dict_name
+                .set(token_contract_package_hash_string.as_str(), token_name.clone());
             let target_token_dict_name: &str =
-                &(ALLOWED_TARGETS_DICT.to_owned() + target_token_dict_name_string.as_str());
+                    &(ALLOWED_TARGETS_DICT.to_owned() + token_name.as_str());
             Dict::init(target_token_dict_name);
 
             let target_token_dict = Dict::instance(target_token_dict_name);
@@ -324,6 +355,7 @@ impl BrigdePool {
             self.allowed_targets_dict
                 .set(target_token_dict_name, target_token_dict_name.to_string());
         }
+
         Ok(())
     }
 
@@ -352,19 +384,24 @@ impl BrigdePool {
     }
 
     fn pay_from_me(&self, token: ContractPackageHash, recipient: Address, amount: U256) {
-        let bridge_pool_contract_package_hash =
-            runtime::get_key("bridge_pool_contract_package_hash")
-                .unwrap_or_revert_with(Error::MissingContractPackageHash)
-                .into_hash()
-                .map(|hash_address| ContractPackageHash::new(hash_address))
-                .unwrap_or_revert_with(Error::InvalidContractPackageHash);
-        self.approve_spender(token, recipient, amount);
-        self.pay_to(
-            token,
-            crate::address::Address::ContractPackage(bridge_pool_contract_package_hash),
-            recipient,
-            amount,
-        )
+        // let bridge_pool_contract_package_hash =
+        //     runtime::get_key("bridge_pool_contract_package_hash")
+        //         .unwrap_or_revert_with(Error::MissingContractPackageHash)
+        //         .into_hash()
+        //         .map(|hash_address| ContractPackageHash::new(hash_address))
+        //         .unwrap_or_revert_with(Error::InvalidContractPackageHash);
+        // self.approve_spender(token, recipient, amount);
+        // self.pay_to(
+        //     token,
+        //     crate::address::Address::ContractPackage(bridge_pool_contract_package_hash),
+        //     recipient,
+        //     amount,
+        // )
+        let args = runtime_args! {
+            "recipient" => recipient,
+            "amount" => amount
+        };
+        runtime::call_versioned_contract::<()>(token, None, "transfer", args);
     }
 
     fn approve_spender(&self, token: ContractPackageHash, spender: Address, amount: U256) {
