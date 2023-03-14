@@ -3,3 +3,4 @@ target
 tests/wasm/*wasm
 contract/keys/
 commmands*
+commands*
