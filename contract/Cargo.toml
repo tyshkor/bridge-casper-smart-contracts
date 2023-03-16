@@ -8,7 +8,7 @@ edition = "2021"
 casper-contract = "1.4.4"
 casper-types = "1.5.0"
 contract-utils = { path = "../utils/contract-utils" }
-# k256 = "0.13.0" 
+k256 = "0.13.0" 
 
 [[bin]]
 name = "bridge_pool"
