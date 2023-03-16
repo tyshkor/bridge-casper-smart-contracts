@@ -18,7 +18,3 @@ doctest = false
 test = false
 
 [profile.release] #reduces Wasm size
-
-[features]
-default = ["std"]
-std = ["casper-types/std"]
