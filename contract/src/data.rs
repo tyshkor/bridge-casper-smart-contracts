@@ -17,6 +17,7 @@ use casper_contract::{
 use casper_types::RuntimeArgs;
 use casper_types::{runtime_args, system::CallStackElement, ContractPackageHash, URef, U256};
 use contract_utils::{get_key, set_key, Dict};
+use sha3::Digest;
 
 const ACCOUNT_HASH_LIQUIDITIES_DICT: &str = "account_hash_liquidities_dict";
 const HASH_ADDR_LIQUIDITIES_DICT: &str = "hash_addr_liquidities_dict";
