@@ -13,7 +13,6 @@ k256 = { version = "0.7.2", default-features = false, features = [
   "ecdsa",
   "zeroize",
 ] }
-digest = "*"
 sha3 = "*"
 
 [[bin]]
@@ -24,3 +23,7 @@ doctest = false
 test = false
 
 [profile.release] #reduces Wasm size
+
+[features]
+default = ["std"]
+std = ["casper-contract/std", "casper-types/std"]
