@@ -5,12 +5,24 @@ authors = ["CasperLabs <https://discord.com/invite/Q38s3Vh>"]
 edition = "2021"
 
 [dependencies]
-casper-engine-test-support = { version = "2.2.0", features = ["test-support"] }
-casper-execution-engine = "2.0.0"
+casper-contract = { version = "1.4.4", default-features = false, features = [
+  "test-support",
+] }
+casper-engine-test-support = { version = "=2.1.0", features = ["test-support"] }
+casper-execution-engine = "1.5.0"
 casper-types = "1.5.0"
+test-env = { path = "../utils/test-env" }
+contract-utils = { path = "../utils/contract-utils" }
 
 [[bin]]
 name = "integration-tests"
 path = "src/integration_tests.rs"
 bench = false
 doctest = false
+
+[features]
+default = [
+  "casper-contract/std",
+  "casper-types/std",
+  "casper-contract/test-support",
+]
