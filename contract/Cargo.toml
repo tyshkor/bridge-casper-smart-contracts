@@ -13,6 +13,8 @@ k256 = { version = "0.7.2", default-features = false, features = [
   "ecdsa",
   "zeroize",
 ] }
+digest = "*"
+sha3 = "*"
 
 [[bin]]
 name = "bridge_pool"
