@@ -31,6 +31,9 @@ pub enum Error {
     CasperAccountHashParsing = 26,
     WrongTokenName = 27,
     NoTokenInTokenContractPackageHashDict = 28,
+    RecoverableSignatureTryFromFail = 29,
+    NonRecoverableSignatureTryFromFail = 30,
+    RecoverVerifyKeyFail = 31,
 }
 
 impl From<Error> for ApiError {

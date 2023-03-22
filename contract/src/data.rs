@@ -256,7 +256,7 @@ impl BrigdePool {
         message: [u8; 32],
         signature: alloc::vec::Vec<u8>,
     ) -> Result<String, Error> {
-        let (digest, signer_string) = self.signer(message, signature);
+        let (digest, signer_string) = Self::signer(&message, &signature)?;
 
         if self
             .hash_addr_liquidities_dict
@@ -271,27 +271,21 @@ impl BrigdePool {
         Ok(signer_string)
     }
 
-    pub fn signer(&self, message: [u8; 32], signature: alloc::vec::Vec<u8>) -> ([u8; 32], String) {
-        ([0; 32], "".to_string())
+    fn signer(message: &[u8], signature: &[u8]) -> Result<(Vec<u8>, String), Error> {
+        let mut hasher = Keccak256::new();
+        hasher.update(message);
+        let digest = hasher.finalize().to_vec();
+    
+        let signature = if signature.len() == 65 {
+            RecoverableSignature::try_from(signature).map_err(|_| Error::RecoverableSignatureTryFromFail)?
+        } else {
+            NonRecoverableSignature::from_bytes(signature).map_err(|_| Error::NonRecoverableSignatureTryFromFail)?
+        };
+    
+        let public_key = signature.recover_verify_key(&digest).map_err(|_| Error::RecoverVerifyKeyFail)?;
+    
+        Ok((digest, alloc::format!("{:#?}", public_key)))
     }
-
-    
-    
-    // fn signer_new(message: &[u8], signature: &[u8]) -> (Vec<u8>, VerifyingKey) {
-    //     let mut hasher = Keccak256::new();
-    //     hasher.update(message);
-    //     let digest = hasher.finalize().to_vec();
-    
-    //     let signature = if signature.len() == 65 {
-    //         RecoverableSignature::try_from(signature).unwrap()
-    //     } else {
-    //         NonRecoverableSignature::from_bytes(signature).unwrap()
-    //     };
-    
-    //     let public_key = signature.recover_verify_key(&digest).unwrap();
-    
-    //     (digest, public_key.)
-    // }
     
     pub fn swap(
         &self,
