@@ -29,14 +29,14 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
     }
 
     fn get_liquidity(&mut self, token_address: String) -> Result<U256, Error> {
-        let _ = ContractPackageHash::from_formatted_str(token_address.as_str())
+        let token_contract_package_hash = ContractPackageHash::from_formatted_str(token_address.as_str())
             .map_err(|_| Error::NotContractPackageHash)?;
 
         let client_address =
             detail::get_immediate_caller_address().unwrap_or_revert_with(Error::NegativeReward);
 
         let bridge_pool_instance = BrigdePool::instance();
-        bridge_pool_instance.get_liquidity_added_by_client(token_address, client_address)
+        bridge_pool_instance.get_liquidity_added_by_client(token_contract_package_hash, client_address)
     }
 
     fn add_liquidity(&mut self, amount: U256, token_address: String) -> Result<(), Error> {

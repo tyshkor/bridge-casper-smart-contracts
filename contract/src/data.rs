@@ -18,6 +18,14 @@ use casper_types::RuntimeArgs;
 use casper_types::{runtime_args, system::CallStackElement, ContractPackageHash, URef, U256};
 use contract_utils::{get_key, set_key, Dict};
 
+use sha3::{Digest, Keccak256};
+use k256::{
+    ecdsa::{recoverable::Signature as RecoverableSignature, signature::Signature as NonRecoverableSignature, VerifyingKey},
+    elliptic_curve::sec1::ToEncodedPoint,
+    PublicKey, SecretKey,
+};
+
+
 const ACCOUNT_HASH_LIQUIDITIES_DICT: &str = "account_hash_liquidities_dict";
 const HASH_ADDR_LIQUIDITIES_DICT: &str = "hash_addr_liquidities_dict";
 const ALLOWED_TARGETS_DICT: &str = "allowed_targets_dict";
@@ -63,7 +71,7 @@ impl BrigdePool {
 
     pub fn get_liquidity_added_by_client(
         &self,
-        token_contract_hash: String,
+        token_contract_hash: ContractPackageHash,
         client_address: Address,
     ) -> Result<U256, Error> {
         let client_string: String = TryInto::try_into(client_address)?;
@@ -72,7 +80,7 @@ impl BrigdePool {
             Address::ContractPackage(_) => &self.hash_addr_liquidities_dict,
             Address::ContractHash(_) => return Err(Error::UnexpectedContractHash),
         };
-        Ok(self.get_liquidity_added_by_client_genric(token_contract_hash, client_string, dict))
+        Ok(self.get_liquidity_added_by_client_genric(token_contract_hash.to_string(), client_string, dict))
     }
 
     pub fn get_liquidity_added_by_client_genric(
@@ -267,6 +275,24 @@ impl BrigdePool {
         ([0; 32], "".to_string())
     }
 
+    
+    
+    // fn signer_new(message: &[u8], signature: &[u8]) -> (Vec<u8>, VerifyingKey) {
+    //     let mut hasher = Keccak256::new();
+    //     hasher.update(message);
+    //     let digest = hasher.finalize().to_vec();
+    
+    //     let signature = if signature.len() == 65 {
+    //         RecoverableSignature::try_from(signature).unwrap()
+    //     } else {
+    //         NonRecoverableSignature::from_bytes(signature).unwrap()
+    //     };
+    
+    //     let public_key = signature.recover_verify_key(&digest).unwrap();
+    
+    //     (digest, public_key.)
+    // }
+    
     pub fn swap(
         &self,
         from_address: Address,
