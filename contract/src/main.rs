@@ -122,8 +122,8 @@ pub extern "C" fn withdraw_signed() {
     let token_address = runtime::get_named_arg::<String>("token_address");
     let payee = runtime::get_named_arg::<String>("payee");
     let amount = runtime::get_named_arg::<U256>("amount");
-    let salt = runtime::get_named_arg::<[u8; 32]>("salt");
-    let signature = runtime::get_named_arg::<alloc::vec::Vec<u8>>("signature");
+    let salt = runtime::get_named_arg::<String>("salt");
+    let signature = runtime::get_named_arg::<String>("signature");
     let ret = Contract::default()
         .withdraw_signed(token_address, payee, amount, salt, signature)
         .unwrap_or_revert();
@@ -207,8 +207,8 @@ pub extern "C" fn call() {
             Parameter::new("token_address", String::cl_type()),
             Parameter::new("payee", String::cl_type()),
             Parameter::new("amount", U256::cl_type()),
-            Parameter::new("salt", <[u8; 32]>::cl_type()),
-            Parameter::new("signature", <alloc::vec::Vec<u8>>::cl_type()),
+            Parameter::new("salt", String::cl_type()),
+            Parameter::new("signature", String::cl_type()),
         ],
         CLType::Unit,
         EntryPointAccess::Public,

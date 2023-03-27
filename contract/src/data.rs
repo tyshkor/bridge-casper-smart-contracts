@@ -21,7 +21,7 @@ use contract_utils::{get_key, set_key, Dict};
 use sha3::{Digest, Keccak256};
 use k256::{
     ecdsa::{recoverable::Signature as RecoverableSignature, signature::Signature as NonRecoverableSignature, VerifyingKey},
-    elliptic_curve::sec1::ToEncodedPoint,
+    elliptic_curve::{sec1::ToEncodedPoint, rand_core::le},
     PublicKey, SecretKey,
 };
 
@@ -38,6 +38,10 @@ const CONTRACT_PACKAGE_HASH: &str = "contract_package_hash";
 const NAME: &str = "name";
 const ADDRESS: &str = "address";
 const WITHDRAW_SIGNED_FUNCTION_NAME: &str = "withdraw_signed";
+
+// error messages for debug
+const RECOVERABLE_SIGNATURE_TRY_FROM_FAIL_MSG: &str = "recoverable_signature_try_from_fail_msg";
+const RECOVER_VERIFY_KEY_FAIL_MSG: &str = "recover_verify_key_fail_msg";
 
 pub struct BrigdePool {
     account_hash_liquidities_dict: Dict,
@@ -178,9 +182,12 @@ impl BrigdePool {
         if let Some(clients_dict_address) = dict.get::<String>(token_contract_hash.as_str()) {
             let clients_dict = Dict::instance(clients_dict_address.as_str());
             if let Some(client_amount) = clients_dict.get::<U256>(client.as_str()) {
-                let new_amount = client_amount.checked_sub(amount).unwrap(); //handle error
-                clients_dict.set(client.as_str(), new_amount);
-                Ok(())
+                if let Some(new_amount) = client_amount.checked_sub(amount) {
+                    clients_dict.set(client.as_str(), new_amount);
+                    Ok(())
+                } else {
+                    Err(Error::CheckedSubFail)
+                }                
             } else {
                 Err(Error::ClientDoesNotHaveSpecificKindOfLioquidity)
             }
@@ -277,12 +284,18 @@ impl BrigdePool {
         let digest = hasher.finalize().to_vec();
     
         let signature = if signature.len() == 65 {
-            RecoverableSignature::try_from(signature).map_err(|_| Error::RecoverableSignatureTryFromFail)?
+            RecoverableSignature::try_from(signature).map_err(|err| {
+                runtime::put_key(RECOVERABLE_SIGNATURE_TRY_FROM_FAIL_MSG, storage::new_uref(err.to_string()).into());
+                Error::RecoverableSignatureTryFromFail
+        })?
         } else {
             NonRecoverableSignature::from_bytes(signature).map_err(|_| Error::NonRecoverableSignatureTryFromFail)?
         };
     
-        let public_key = signature.recover_verify_key(&digest).map_err(|_| Error::RecoverVerifyKeyFail)?;
+        let public_key = signature.recover_verify_key(&digest).map_err(|err| {
+            runtime::put_key(RECOVER_VERIFY_KEY_FAIL_MSG, storage::new_uref(err.to_string()).into());
+            Error::RecoverVerifyKeyFail
+        })?;
     
         Ok((digest, alloc::format!("{:#?}", public_key)))
     }
