@@ -21,7 +21,7 @@ use contract_utils::{get_key, set_key, Dict};
 use sha3::{Digest, Keccak256};
 use k256::{
     ecdsa::{recoverable::Signature as RecoverableSignature, signature::Signature as NonRecoverableSignature, VerifyingKey},
-    elliptic_curve::sec1::ToEncodedPoint,
+    elliptic_curve::{sec1::ToEncodedPoint, rand_core::le},
     PublicKey, SecretKey,
 };
 
@@ -38,6 +38,12 @@ const CONTRACT_PACKAGE_HASH: &str = "contract_package_hash";
 const NAME: &str = "name";
 const ADDRESS: &str = "address";
 const WITHDRAW_SIGNED_FUNCTION_NAME: &str = "withdraw_signed";
+
+// error messages for debug
+const RECOVERABLE_SIGNATURE_TRY_FROM_FAIL_MSG: &str = "recoverable_signature_try_from_fail_msg";
+const RECOVER_VERIFY_KEY_FAIL_MSG: &str = "recover_verify_key_fail_msg";
+
+const TRY_SIGNER: &str = "try_signer";
 
 pub struct BrigdePool {
     account_hash_liquidities_dict: Dict,
@@ -178,15 +184,22 @@ impl BrigdePool {
         if let Some(clients_dict_address) = dict.get::<String>(token_contract_hash.as_str()) {
             let clients_dict = Dict::instance(clients_dict_address.as_str());
             if let Some(client_amount) = clients_dict.get::<U256>(client.as_str()) {
-                let new_amount = client_amount.checked_sub(amount).unwrap(); //handle error
-                clients_dict.set(client.as_str(), new_amount);
-                Ok(())
+                if let Some(new_amount) = client_amount.checked_sub(amount) {
+                    clients_dict.set(client.as_str(), new_amount);
+                    Ok(())
+                } else {
+                    Err(Error::CheckedSubFail)
+                }                
             } else {
                 Err(Error::ClientDoesNotHaveSpecificKindOfLioquidity)
             }
         } else {
             Err(Error::ClientDoesNotHaveAnyKindOfLioquidity)
         }
+    }
+
+    pub fn add_signer(&self, signer: String) {
+        self.signers_dict.set(signer.as_str(), true)
     }
 
     pub fn withdraw_signed(
@@ -206,6 +219,8 @@ impl BrigdePool {
         );
         let signer = self.signer_unique(message, signature)?;
 
+        runtime::put_key(TRY_SIGNER, storage::new_uref(signer.clone()).into());
+
         if !self
             .signers_dict
             .get::<bool>(signer.as_str())
@@ -213,18 +228,18 @@ impl BrigdePool {
         {
             return Err(Error::InvalidSigner);
         }
-        self.pay_from_me(token_contract_package_hash, payee, amount);
-        let dict = match payee {
-            Address::Account(_) => &self.account_hash_liquidities_dict,
-            Address::ContractPackage(_) => &self.hash_addr_liquidities_dict,
-            Address::ContractHash(_) => return Err(Error::UnexpectedContractHash),
-        };
-        self.remove_liquidity_generic(
-            token_contract_package_hash.to_string(),
-            payee_string,
-            amount,
-            dict,
-        )?;
+        // self.pay_from_me(token_contract_package_hash, payee, amount);
+        // let dict = match payee {
+        //     Address::Account(_) => &self.account_hash_liquidities_dict,
+        //     Address::ContractPackage(_) => &self.hash_addr_liquidities_dict,
+        //     Address::ContractHash(_) => return Err(Error::UnexpectedContractHash),
+        // };
+        // self.remove_liquidity_generic(
+        //     token_contract_package_hash.to_string(),
+        //     payee_string,
+        //     amount,
+        //     dict,
+        // )?;
         Ok(())
     }
 
@@ -258,15 +273,20 @@ impl BrigdePool {
     ) -> Result<String, Error> {
         let (digest, signer_string) = Self::signer(&message, &signature)?;
 
+        let mut digest_str = String::new();
+        for item in digest {
+            digest_str.push(item.into())
+        }
+
         if self
             .hash_addr_liquidities_dict
-            .get::<bool>(alloc::format!("{:#?}", digest).as_str())
+            .get::<bool>(digest_str.as_str())
             .is_some()
         {
             return Err(Error::MessageAlreadyUsed);
         } else {
             self.hash_addr_liquidities_dict
-                .set(alloc::format!("{:#?}", digest).as_str(), true);
+                .set(digest_str.as_str(), true);
         }
         Ok(signer_string)
     }
@@ -277,14 +297,27 @@ impl BrigdePool {
         let digest = hasher.finalize().to_vec();
     
         let signature = if signature.len() == 65 {
-            RecoverableSignature::try_from(signature).map_err(|_| Error::RecoverableSignatureTryFromFail)?
+            let mut signature_vec: Vec<u8> = signature.to_vec();
+            signature_vec[64] -= 27;
+            RecoverableSignature::try_from(&signature_vec[..]).map_err(|err| {
+                runtime::put_key(RECOVERABLE_SIGNATURE_TRY_FROM_FAIL_MSG, storage::new_uref(err.to_string()).into());
+                Error::RecoverableSignatureTryFromFail
+        })?
         } else {
             NonRecoverableSignature::from_bytes(signature).map_err(|_| Error::NonRecoverableSignatureTryFromFail)?
         };
     
-        let public_key = signature.recover_verify_key(&digest).map_err(|_| Error::RecoverVerifyKeyFail)?;
-    
-        Ok((digest, alloc::format!("{:#?}", public_key)))
+        let public_key = signature.recover_verify_key(&digest).map_err(|err| {
+            runtime::put_key(RECOVER_VERIFY_KEY_FAIL_MSG, storage::new_uref(err.to_string()).into());
+            Error::RecoverVerifyKeyFail
+        })?;
+
+        let mut public_key_str = String::new();
+        for item in public_key.to_bytes() {
+            public_key_str.push(item.into())
+        }
+
+        Ok((digest, public_key_str))
     }
     
     pub fn swap(

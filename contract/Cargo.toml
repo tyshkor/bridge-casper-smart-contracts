@@ -10,6 +10,7 @@ casper-types = "1.5.0"
 contract-utils = { path = "../utils/contract-utils" }
 k256 = { version = "0.7.2", default-features = false, features = ["ecdsa", "zeroize", "keccak256"] }
 sha3 = "*"
+hex = "0.4.3"
 
 [[bin]]
 name = "bridge_pool"

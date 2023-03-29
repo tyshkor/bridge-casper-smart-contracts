@@ -10,6 +10,7 @@ use casper_contract::unwrap_or_revert::UnwrapOrRevert;
 use casper_types::account::AccountHash;
 use casper_types::{ContractPackageHash, U256};
 use contract_utils::{ContractContext, ContractStorage};
+use k256::ecdsa::Signature;
 
 pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage> {
     fn init(&mut self) {
@@ -128,8 +129,8 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
         token_address: String,
         payee: String,
         amount: U256,
-        salt: [u8; 32],
-        signature: alloc::vec::Vec<u8>,
+        salt: String,
+        signature: String,
     ) -> Result<(), Error> {
         let actor =
             detail::get_immediate_caller_address().unwrap_or_revert_with(Error::NegativeReward);
@@ -137,12 +138,11 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
         let token = ContractPackageHash::from_formatted_str(token_address.as_str())
             .map_err(|_| Error::NotContractPackageHash)?;
 
-        let payee_account_hash: AccountHash =
-            AccountHash::from_formatted_str(&payee).map_err(|_| Error::CasperAccountHashParsing)?;
-        let payee_address: Address = From::from(payee_account_hash);
+        let salt_array: [u8; 32] = hex::decode(salt).map_err(|_| Error::SaltHexFail)?.try_into().map_err(|_| Error::SaltWrongSize)?;
+        let signature_vec = hex::decode(signature).unwrap();
 
         let bridge_pool_instance = BrigdePool::instance();
-        bridge_pool_instance.withdraw_signed(token, payee_address, amount, salt, signature)?;
+        bridge_pool_instance.withdraw_signed(token, actor, amount, salt_array, signature_vec)?;
         self.emit(BridgePoolEvent::TransferBySignature {
             signer: actor,
             reciever: payee,
@@ -150,5 +150,10 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
             amount,
         });
         Ok(())
+    }
+
+    fn add_signer(&mut self, signer: String) {
+        let bridge_pool_instance = BrigdePool::instance();
+        bridge_pool_instance.add_signer(signer)
     }
 }

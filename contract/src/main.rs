@@ -28,6 +28,7 @@ const ENTRY_POINT_REMOVE_LIQUIDITY: &str = "remove_liquidity";
 const ENTRY_POINT_SWAP: &str = "swap";
 const ENTRY_POINT_ALLOW_TARGET: &str = "allow_target";
 const ENTRY_POINT_WITHDRAW_SIGNED: &str = "withdraw_signed";
+const ENTRY_POINT_ADD_SIGNER: &str = "add_signer";
 
 const CONTRACT_VERSION_KEY: &str = "version";
 const CONTRACT_KEY: &str = "bridge_pool";
@@ -122,11 +123,19 @@ pub extern "C" fn withdraw_signed() {
     let token_address = runtime::get_named_arg::<String>("token_address");
     let payee = runtime::get_named_arg::<String>("payee");
     let amount = runtime::get_named_arg::<U256>("amount");
-    let salt = runtime::get_named_arg::<[u8; 32]>("salt");
-    let signature = runtime::get_named_arg::<alloc::vec::Vec<u8>>("signature");
+    let salt = runtime::get_named_arg::<String>("salt");
+    let signature = runtime::get_named_arg::<String>("signature");
     let ret = Contract::default()
         .withdraw_signed(token_address, payee, amount, salt, signature)
         .unwrap_or_revert();
+    runtime::ret(CLValue::from_t(ret).unwrap_or_revert());
+}
+
+#[no_mangle]
+pub extern "C" fn add_signer() {
+    let signer = runtime::get_named_arg::<String>("signer");
+    let ret = Contract::default()
+        .add_signer(signer);
     runtime::ret(CLValue::from_t(ret).unwrap_or_revert());
 }
 
@@ -207,8 +216,18 @@ pub extern "C" fn call() {
             Parameter::new("token_address", String::cl_type()),
             Parameter::new("payee", String::cl_type()),
             Parameter::new("amount", U256::cl_type()),
-            Parameter::new("salt", <[u8; 32]>::cl_type()),
-            Parameter::new("signature", <alloc::vec::Vec<u8>>::cl_type()),
+            Parameter::new("salt", String::cl_type()),
+            Parameter::new("signature", String::cl_type()),
+        ],
+        CLType::Unit,
+        EntryPointAccess::Public,
+        EntryPointType::Contract,
+    ));
+
+    bridge_pool_entry_points.add_entry_point(EntryPoint::new(
+        ENTRY_POINT_ADD_SIGNER,
+        vec![
+            Parameter::new("signer", String::cl_type()),
         ],
         CLType::Unit,
         EntryPointAccess::Public,

@@ -4,3 +4,4 @@ tests/wasm/*wasm
 contract/keys/
 commmands*
 commands*
+testing

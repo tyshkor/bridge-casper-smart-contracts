@@ -34,6 +34,10 @@ pub enum Error {
     RecoverableSignatureTryFromFail = 29,
     NonRecoverableSignatureTryFromFail = 30,
     RecoverVerifyKeyFail = 31,
+    CheckedSubFail = 32,
+    SaltHexFail = 33,
+    SaltWrongSize = 34,
+    SignatureHexFail = 35,
 }
 
 impl From<Error> for ApiError {
