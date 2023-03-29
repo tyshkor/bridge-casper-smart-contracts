@@ -28,6 +28,7 @@ const ENTRY_POINT_REMOVE_LIQUIDITY: &str = "remove_liquidity";
 const ENTRY_POINT_SWAP: &str = "swap";
 const ENTRY_POINT_ALLOW_TARGET: &str = "allow_target";
 const ENTRY_POINT_WITHDRAW_SIGNED: &str = "withdraw_signed";
+const ENTRY_POINT_ADD_SIGNER: &str = "add_signer";
 
 const CONTRACT_VERSION_KEY: &str = "version";
 const CONTRACT_KEY: &str = "bridge_pool";
@@ -131,6 +132,14 @@ pub extern "C" fn withdraw_signed() {
 }
 
 #[no_mangle]
+pub extern "C" fn add_signer() {
+    let signer = runtime::get_named_arg::<String>("signer");
+    let ret = Contract::default()
+        .add_signer(signer);
+    runtime::ret(CLValue::from_t(ret).unwrap_or_revert());
+}
+
+#[no_mangle]
 pub extern "C" fn call() {
     let bridge_pool_named_keys = NamedKeys::new();
 
@@ -209,6 +218,16 @@ pub extern "C" fn call() {
             Parameter::new("amount", U256::cl_type()),
             Parameter::new("salt", String::cl_type()),
             Parameter::new("signature", String::cl_type()),
+        ],
+        CLType::Unit,
+        EntryPointAccess::Public,
+        EntryPointType::Contract,
+    ));
+
+    bridge_pool_entry_points.add_entry_point(EntryPoint::new(
+        ENTRY_POINT_ADD_SIGNER,
+        vec![
+            Parameter::new("signer", String::cl_type()),
         ],
         CLType::Unit,
         EntryPointAccess::Public,

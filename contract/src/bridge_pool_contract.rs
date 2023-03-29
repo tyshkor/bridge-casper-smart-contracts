@@ -151,4 +151,9 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
         });
         Ok(())
     }
+
+    fn add_signer(&mut self, signer: String) {
+        let bridge_pool_instance = BrigdePool::instance();
+        bridge_pool_instance.add_signer(signer)
+    }
 }
