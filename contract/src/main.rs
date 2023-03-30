@@ -242,14 +242,7 @@ pub extern "C" fn call() {
         Some("bridge_pool_access_uref".to_string()),
     );
 
-    let package_hash: ContractPackageHash = ContractPackageHash::new(
-        runtime::get_key("contract_package_hash")
-            .unwrap_or_revert()
-            .into_hash()
-            .unwrap_or_revert(),
-    );
-
-    let package_hash_key: Key = package_hash.into();
+    let package_hash_key: Key = stored_contract_hash.into();
 
     let _: () = runtime::call_contract(
         stored_contract_hash,
