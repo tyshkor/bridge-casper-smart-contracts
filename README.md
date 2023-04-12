@@ -8,10 +8,10 @@ This contract has the following functionality:
 - add liquidity to the pool
 - remove liquidity from the pool
 - withdraw liquidity from the pool
-- withraw signed liquidity from the pool securelt
+- withraw signed liquidity from the pool securely
 - swap with another network
 - get liquidity already in the pool
-- add target for pollible swap
+- add target for possible swap
 
 ## Table of Contents
 
