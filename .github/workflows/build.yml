@@ -28,7 +28,7 @@ jobs:
         run: make prepare
 
       - name: Run clippy and fmt
-        run: make check-lint
+        run: rustup component add clippy --toolchain nightly-x86_64-unknown-linux-gnu ; make check-lint
 
       - name: Build
         run: make build-contract

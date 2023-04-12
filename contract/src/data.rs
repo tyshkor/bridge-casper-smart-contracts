@@ -18,13 +18,9 @@ use casper_types::RuntimeArgs;
 use casper_types::{runtime_args, system::CallStackElement, ContractPackageHash, URef, U256};
 use contract_utils::{get_key, set_key, Dict};
 
-use sha3::{Digest, Keccak256};
-use k256::{
-    ecdsa::{recoverable::Signature as RecoverableSignature, signature::Signature as NonRecoverableSignature, VerifyingKey},
-    elliptic_curve::{sec1::ToEncodedPoint, rand_core::le},
-    PublicKey, SecretKey,
+use k256::ecdsa::{
+    recoverable::Signature as RecoverableSignature, signature::Signature as NonRecoverableSignature,
 };
-
 
 const ACCOUNT_HASH_LIQUIDITIES_DICT: &str = "account_hash_liquidities_dict";
 const HASH_ADDR_LIQUIDITIES_DICT: &str = "hash_addr_liquidities_dict";
@@ -37,7 +33,6 @@ const CONTRACT_PACKAGE_HASH: &str = "contract_package_hash";
 
 const NAME: &str = "name";
 const ADDRESS: &str = "address";
-const WITHDRAW_SIGNED_FUNCTION_NAME: &str = "withdraw_signed";
 
 pub struct BrigdePool {
     // dictionary to track client conected dictionaries
@@ -47,6 +42,7 @@ pub struct BrigdePool {
     // dictionary to track allowed targets
     allowed_targets_dict: Dict,
     // dictionary to track used hashes
+    #[allow(unused)]
     used_hashes_dict: Dict,
     // dictionary to track signers
     signers_dict: Dict,
@@ -61,7 +57,9 @@ impl BrigdePool {
             allowed_targets_dict: Dict::instance(ALLOWED_TARGETS_DICT),
             used_hashes_dict: Dict::instance(USED_HASHES_DICT),
             signers_dict: Dict::instance(SIGNERS_DICT),
-            token_contract_package_hash_dict_name: Dict::instance(TOKEN_CONTRACT_PACKAGE_HASH_DICT_NAME),
+            token_contract_package_hash_dict_name: Dict::instance(
+                TOKEN_CONTRACT_PACKAGE_HASH_DICT_NAME,
+            ),
         }
     }
 
@@ -86,7 +84,11 @@ impl BrigdePool {
             Address::ContractPackage(_) => &self.hash_addr_liquidities_dict,
             Address::ContractHash(_) => return Err(Error::UnexpectedContractHash),
         };
-        Ok(self.get_liquidity_added_by_client_genric(token_contract_hash.to_string(), client_string, dict))
+        Ok(self.get_liquidity_added_by_client_genric(
+            token_contract_hash.to_string(),
+            client_string,
+            dict,
+        ))
     }
 
     pub fn get_liquidity_added_by_client_genric(
@@ -105,7 +107,7 @@ impl BrigdePool {
         res
     }
 
-    // add liquidity to the pool 
+    // add liquidity to the pool
     pub fn add_liquidity(
         &self,
         bridge_pool_contract_package_hash: ContractPackageHash,
@@ -199,7 +201,7 @@ impl BrigdePool {
                     Ok(())
                 } else {
                     Err(Error::CheckedSubFail)
-                }                
+                }
             } else {
                 Err(Error::ClientDoesNotHaveSpecificKindOfLioquidity)
             }
@@ -242,7 +244,7 @@ impl BrigdePool {
         token_contract_package_hash: ContractPackageHash,
         payee: Address,
         amount: U256,
-        salt: [u8; 32],
+        _salt: [u8; 32],
         signature: alloc::vec::Vec<u8>,
         message_hash: String,
     ) -> Result<(), Error> {
@@ -302,16 +304,21 @@ impl BrigdePool {
         signature: alloc::vec::Vec<u8>,
     ) -> Result<Vec<u8>, Error> {
         let signature_rec = if signature.len() == 65 {
-            let mut signature_vec: Vec<u8> = signature.clone();
+            let mut signature_vec: Vec<u8> = signature;
             signature_vec[64] -= 27;
-            RecoverableSignature::from_bytes(&signature_vec[..]).map_err(|_| Error::RecoverableSignatureTryFromFail)?
+            RecoverableSignature::from_bytes(&signature_vec[..])
+                .map_err(|_| Error::RecoverableSignatureTryFromFail)?
         } else {
-            NonRecoverableSignature::from_bytes(&signature[..]).map_err(|_| Error::NonRecoverableSignatureTryFromFail)?
+            NonRecoverableSignature::from_bytes(&signature[..])
+                .map_err(|_| Error::NonRecoverableSignatureTryFromFail)?
         };
 
-        let message_hash_bytes = hex::decode(message_hash.clone()).map_err(|_| Error::MessageHashHexDecodingFail)?;
+        let message_hash_bytes =
+            hex::decode(message_hash.clone()).map_err(|_| Error::MessageHashHexDecodingFail)?;
 
-        let public_key = contract_utils::keccak::ecdsa_recover(&message_hash_bytes[..], &signature_rec).map_err(|_| Error::EcdsaPublicKeyRecoveryFail)?;
+        let public_key =
+            contract_utils::keccak::ecdsa_recover(&message_hash_bytes[..], &signature_rec)
+                .map_err(|_| Error::EcdsaPublicKeyRecoveryFail)?;
 
         if self
             .hash_addr_liquidities_dict
@@ -325,7 +332,7 @@ impl BrigdePool {
         }
         Ok(public_key)
     }
-    
+
     // function to swap tokens from different pools
     pub fn swap(
         &self,
@@ -360,7 +367,7 @@ impl BrigdePool {
             self.pay_me(token_contract_package_hash, from_address, amount);
             Ok(())
         } else {
-            return Err(Error::NoTokenInTokenContractPackageHashDict);
+            Err(Error::NoTokenInTokenContractPackageHashDict)
         }
     }
 
@@ -380,9 +387,10 @@ impl BrigdePool {
             if token_name != token_name_from_dict {
                 return Err(Error::WrongTokenName);
             }
-            if let Some(target_token_dict_address) = self.allowed_targets_dict.get::<String>(
-                &(ALLOWED_TARGETS_DICT.to_owned() + token_name.as_str()),
-            ) {
+            if let Some(target_token_dict_address) = self
+                .allowed_targets_dict
+                .get::<String>(&(ALLOWED_TARGETS_DICT.to_owned() + token_name.as_str()))
+            {
                 let target_token_dict = Dict::instance(target_token_dict_address.as_str());
                 if target_token_dict
                     .get::<String>(&target_network.to_string())
@@ -396,18 +404,20 @@ impl BrigdePool {
                 let target_token_dict_name: &str =
                     &(ALLOWED_TARGETS_DICT.to_owned() + token_name.as_str());
                 Dict::init(target_token_dict_name);
-    
+
                 let target_token_dict = Dict::instance(target_token_dict_name);
                 target_token_dict.set(target_network.to_string().as_str(), target_token.as_str());
-    
+
                 self.allowed_targets_dict
                     .set(target_token_dict_name, target_token_dict_name.to_string());
             }
         } else {
-            self.token_contract_package_hash_dict_name
-                .set(token_contract_package_hash_string.as_str(), token_name.clone());
+            self.token_contract_package_hash_dict_name.set(
+                token_contract_package_hash_string.as_str(),
+                token_name.clone(),
+            );
             let target_token_dict_name: &str =
-                    &(ALLOWED_TARGETS_DICT.to_owned() + token_name.as_str());
+                &(ALLOWED_TARGETS_DICT.to_owned() + token_name.as_str());
             Dict::init(target_token_dict_name);
 
             let target_token_dict = Dict::instance(target_token_dict_name);
@@ -436,7 +446,7 @@ impl BrigdePool {
             runtime::get_key("bridge_pool_contract_package_hash")
                 .unwrap_or_revert_with(Error::MissingContractPackageHash)
                 .into_hash()
-                .map(|hash_address| ContractPackageHash::new(hash_address))
+                .map(ContractPackageHash::new)
                 .unwrap_or_revert_with(Error::InvalidContractPackageHash);
         self.pay_to(
             token,
@@ -465,14 +475,6 @@ impl BrigdePool {
             "amount" => amount
         };
         runtime::call_versioned_contract::<()>(token, None, "transfer", args);
-    }
-
-    fn approve_spender(&self, token: ContractPackageHash, spender: Address, amount: U256) {
-        let args = runtime_args! {
-            "spender" => spender,
-            "amount" => amount
-        };
-        runtime::call_versioned_contract::<()>(token, None, "approve", args);
     }
 }
 
