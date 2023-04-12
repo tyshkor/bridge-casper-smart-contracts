@@ -29,6 +29,7 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
         data::emit(&event);
     }
 
+    // outer function to get liquidity already in pool
     fn get_liquidity(&mut self, token_address: String) -> Result<U256, Error> {
         let token_contract_package_hash = ContractPackageHash::from_formatted_str(token_address.as_str())
             .map_err(|_| Error::NotContractPackageHash)?;
@@ -40,6 +41,7 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
         bridge_pool_instance.get_liquidity_added_by_client(token_contract_package_hash, client_address)
     }
 
+    // outer function to add liquidity to the pool
     fn add_liquidity(&mut self, amount: U256, token_address: String, bridge_pool_contract_package_hash: String) -> Result<(), Error> {
         let token_contract_package_hash =
             ContractPackageHash::from_formatted_str(token_address.as_str())
@@ -63,6 +65,7 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
         Ok(())
     }
 
+    // outer function to remove liquidity from the pool
     fn remove_liquidity(&mut self, amount: U256, token_address: String) -> Result<(), Error> {
         let token_contract_package_hash =
             ContractPackageHash::from_formatted_str(token_address.as_str())
@@ -86,6 +89,7 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
         Ok(())
     }
 
+    // outer function to swap liquidity
     fn swap(
         &mut self,
         token_address: String,
@@ -113,6 +117,7 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
         Ok(())
     }
 
+    // outer function to allow target
     fn allow_target(
         &mut self,
         token_address: String,
@@ -128,6 +133,7 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
         Ok(())
     }
 
+    // outer function to withdraw liquidity from the pool securely
     fn withdraw_signed(
         &mut self,
         token_address: String,
@@ -157,11 +163,13 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
         Ok(())
     }
 
+    // outer function to add signer
     fn add_signer(&mut self, signer: String) {
         let bridge_pool_instance = BrigdePool::instance();
         bridge_pool_instance.add_signer(signer)
     }
 
+    // outer function to withdraw liquidity from the pool
     fn withdraw(&mut self, amount: U256, token_address: String) -> Result<(), Error> {
         let token_contract_package_hash =
             ContractPackageHash::from_formatted_str(token_address.as_str())

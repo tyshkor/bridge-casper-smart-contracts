@@ -2,6 +2,17 @@
 
 This repository contains the smart contracts used for the Bridge Pool on the Casper Network.
 
+
+This contract has the following functionality:
+
+- add liquidity to the pool
+- remove liquidity from the pool
+- withdraw liquidity from the pool
+- withraw signed liquidity from the pool securelt
+- swap with another network
+- get liquidity already in the pool
+- add target for pollible swap
+
 ## Table of Contents
 
 1. [Getting Started](#getting-started)

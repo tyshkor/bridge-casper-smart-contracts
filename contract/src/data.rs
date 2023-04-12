@@ -40,10 +40,15 @@ const ADDRESS: &str = "address";
 const WITHDRAW_SIGNED_FUNCTION_NAME: &str = "withdraw_signed";
 
 pub struct BrigdePool {
+    // dictionary to track client conected dictionaries
     account_hash_liquidities_dict: Dict,
+    // dictionary to track external contracts' conected dictionaries
     hash_addr_liquidities_dict: Dict,
+    // dictionary to track allowed targets
     allowed_targets_dict: Dict,
+    // dictionary to track used hashes
     used_hashes_dict: Dict,
+    // dictionary to track signers
     signers_dict: Dict,
     token_contract_package_hash_dict_name: Dict,
 }
@@ -69,6 +74,7 @@ impl BrigdePool {
         Dict::init(TOKEN_CONTRACT_PACKAGE_HASH_DICT_NAME);
     }
 
+    // function to get liquidity already in pool by client address
     pub fn get_liquidity_added_by_client(
         &self,
         token_contract_hash: ContractPackageHash,
@@ -99,6 +105,7 @@ impl BrigdePool {
         res
     }
 
+    // add liquidity to the pool 
     pub fn add_liquidity(
         &self,
         bridge_pool_contract_package_hash: ContractPackageHash,
@@ -106,8 +113,6 @@ impl BrigdePool {
         client_address: Address,
         amount: U256,
     ) -> Result<(), Error> {
-        // self.pay_me(token_contract_package_hash, client_address, amount);
-
         self.pay_to(
             token_contract_package_hash,
             client_address,
@@ -131,6 +136,7 @@ impl BrigdePool {
         Ok(())
     }
 
+    // generic function to handle the case of a client and a contract when adding liquidity
     pub fn add_liquidity_generic(
         &self,
         token_contract_hash: String,
@@ -154,6 +160,7 @@ impl BrigdePool {
         }
     }
 
+    // remove liquidity from the pool
     pub fn remove_liquidity(
         &self,
         token_contract_package_hash: ContractPackageHash,
@@ -176,6 +183,7 @@ impl BrigdePool {
         Ok(())
     }
 
+    // generic function to handle the case of a client and a contract when removing liquidity
     fn remove_liquidity_generic(
         &self,
         token_contract_hash: String,
@@ -200,6 +208,7 @@ impl BrigdePool {
         }
     }
 
+    // withdraw liquidity from pool
     pub fn withdraw(
         &self,
         token_contract_package_hash: ContractPackageHash,
@@ -222,10 +231,12 @@ impl BrigdePool {
         Ok(())
     }
 
+    // function to add signer
     pub fn add_signer(&self, signer: String) {
         self.signers_dict.set(&signer, true)
     }
 
+    // withdraw liquidity from pool securely
     pub fn withdraw_signed(
         &self,
         token_contract_package_hash: ContractPackageHash,
@@ -261,6 +272,7 @@ impl BrigdePool {
         Ok(())
     }
 
+    // function to build signed message
     pub fn withdraw_signed_message(
         &self,
         token_contract_package_hash: ContractPackageHash,
@@ -314,6 +326,7 @@ impl BrigdePool {
         Ok(public_key)
     }
     
+    // function to swap tokens from different pools
     pub fn swap(
         &self,
         from_address: Address,
@@ -351,6 +364,7 @@ impl BrigdePool {
         }
     }
 
+    // function to allow target for swap
     pub fn allow_target(
         &self,
         token_contract_package_hash: ContractPackageHash,
@@ -406,6 +420,7 @@ impl BrigdePool {
         Ok(())
     }
 
+    // pay from any address to any address. Remember to approve the tokens beforehand
     fn pay_to(&self, token: ContractPackageHash, owner: Address, recipient: Address, amount: U256) {
         let args = runtime_args! {
             "owner" => owner,
@@ -415,6 +430,7 @@ impl BrigdePool {
         runtime::call_versioned_contract::<()>(token, None, "transfer_from", args);
     }
 
+    // pay from any address to this contract. Remember to approve the tokens beforehand
     fn pay_me(&self, token: ContractPackageHash, spender: Address, amount: U256) {
         let bridge_pool_contract_package_hash =
             runtime::get_key("bridge_pool_contract_package_hash")
@@ -476,6 +492,7 @@ pub fn set_address(address: String) {
     set_key(ADDRESS, address);
 }
 
+// function to return contract package hash in case it's possible
 pub fn contract_package_hash() -> ContractPackageHash {
     let call_stacks = get_call_stack();
     let last_entry = call_stacks.last().unwrap_or_revert();
@@ -489,6 +506,7 @@ pub fn contract_package_hash() -> ContractPackageHash {
     package_hash.unwrap_or_revert()
 }
 
+// function to emit an event
 pub fn emit(event: &BridgePoolEvent) {
     let mut events = Vec::new();
     let package = contract_package_hash();
