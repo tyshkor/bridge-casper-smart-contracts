@@ -40,16 +40,20 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
         bridge_pool_instance.get_liquidity_added_by_client(token_contract_package_hash, client_address)
     }
 
-    fn add_liquidity(&mut self, amount: U256, token_address: String) -> Result<(), Error> {
+    fn add_liquidity(&mut self, amount: U256, token_address: String, bridge_pool_contract_package_hash: String) -> Result<(), Error> {
         let token_contract_package_hash =
             ContractPackageHash::from_formatted_str(token_address.as_str())
                 .map_err(|_| Error::NotContractPackageHash)?;
+
+        let bridge_pool_contract_package_hash =
+        ContractPackageHash::from_formatted_str(bridge_pool_contract_package_hash.as_str())
+            .map_err(|_| Error::NotBridgePoolContractPackageHash)?;
 
         let client_address =
             detail::get_immediate_caller_address().unwrap_or_revert_with(Error::NegativeReward);
 
         let bridge_pool_instance = BrigdePool::instance();
-        bridge_pool_instance.add_liquidity(token_contract_package_hash, client_address, amount)?;
+        bridge_pool_instance.add_liquidity(bridge_pool_contract_package_hash, token_contract_package_hash, client_address, amount)?;
 
         self.emit(BridgePoolEvent::BridgeLiquidityAdded {
             actor: client_address,
@@ -131,6 +135,7 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
         amount: U256,
         salt: String,
         signature: String,
+        message_hash: String,
     ) -> Result<(), Error> {
         let actor =
             detail::get_immediate_caller_address().unwrap_or_revert_with(Error::NegativeReward);
@@ -142,7 +147,7 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
         let signature_vec = hex::decode(signature).unwrap();
 
         let bridge_pool_instance = BrigdePool::instance();
-        bridge_pool_instance.withdraw_signed(token, actor, amount, salt_array, signature_vec)?;
+        bridge_pool_instance.withdraw_signed(token, actor, amount, salt_array, signature_vec, message_hash)?;
         self.emit(BridgePoolEvent::TransferBySignature {
             signer: actor,
             reciever: payee,
@@ -155,5 +160,28 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
     fn add_signer(&mut self, signer: String) {
         let bridge_pool_instance = BrigdePool::instance();
         bridge_pool_instance.add_signer(signer)
+    }
+
+    fn withdraw(&mut self, amount: U256, token_address: String) -> Result<(), Error> {
+        let token_contract_package_hash =
+            ContractPackageHash::from_formatted_str(token_address.as_str())
+                .map_err(|_| Error::NotContractPackageHash)?;
+
+        let client_address =
+            detail::get_immediate_caller_address().unwrap_or_revert_with(Error::NegativeReward);
+
+        let bridge_pool_instance = BrigdePool::instance();
+        bridge_pool_instance.withdraw(
+            token_contract_package_hash,
+            client_address,
+            amount,
+        )?;
+
+        self.emit(BridgePoolEvent::BridgeLiquidityRemoved {
+            actor: client_address,
+            token: token_contract_package_hash,
+            amount,
+        });
+        Ok(())
     }
 }

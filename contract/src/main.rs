@@ -29,6 +29,7 @@ const ENTRY_POINT_SWAP: &str = "swap";
 const ENTRY_POINT_ALLOW_TARGET: &str = "allow_target";
 const ENTRY_POINT_WITHDRAW_SIGNED: &str = "withdraw_signed";
 const ENTRY_POINT_ADD_SIGNER: &str = "add_signer";
+const ENTRY_POINT_WITHDRAW: &str = "withdraw";
 
 const CONTRACT_VERSION_KEY: &str = "version";
 const CONTRACT_KEY: &str = "bridge_pool";
@@ -78,8 +79,9 @@ pub extern "C" fn get_liquidity() {
 pub extern "C" fn add_liquidity() {
     let amount = runtime::get_named_arg::<U256>("amount");
     let token_address = runtime::get_named_arg::<String>("token_address");
+    let bridge_pool_contract_package_hash = runtime::get_named_arg::<String>("bridge_pool_contract_package_hash");
     let ret = Contract::default()
-        .add_liquidity(amount, token_address)
+        .add_liquidity(amount, token_address, bridge_pool_contract_package_hash)
         .unwrap_or_revert();
     runtime::ret(CLValue::from_t(ret).unwrap_or_revert());
 }
@@ -125,8 +127,9 @@ pub extern "C" fn withdraw_signed() {
     let amount = runtime::get_named_arg::<U256>("amount");
     let salt = runtime::get_named_arg::<String>("salt");
     let signature = runtime::get_named_arg::<String>("signature");
+    let message_hash = runtime::get_named_arg::<String>("message_hash");
     let ret = Contract::default()
-        .withdraw_signed(token_address, payee, amount, salt, signature)
+        .withdraw_signed(token_address, payee, amount, salt, signature, message_hash)
         .unwrap_or_revert();
     runtime::ret(CLValue::from_t(ret).unwrap_or_revert());
 }
@@ -136,6 +139,16 @@ pub extern "C" fn add_signer() {
     let signer = runtime::get_named_arg::<String>("signer");
     let ret = Contract::default()
         .add_signer(signer);
+    runtime::ret(CLValue::from_t(ret).unwrap_or_revert());
+}
+
+#[no_mangle]
+pub extern "C" fn withdraw() {
+    let amount = runtime::get_named_arg::<U256>("amount");
+    let token_address = runtime::get_named_arg::<String>("token_address");
+    let ret = Contract::default()
+        .withdraw(amount, token_address)
+        .unwrap_or_revert();
     runtime::ret(CLValue::from_t(ret).unwrap_or_revert());
 }
 
@@ -167,6 +180,7 @@ pub extern "C" fn call() {
         vec![
             Parameter::new("amount", U256::cl_type()),
             Parameter::new("token_address", String::cl_type()),
+            Parameter::new("bridge_pool_contract_package_hash", String::cl_type()),
         ],
         CLType::Unit,
         EntryPointAccess::Public,
@@ -228,6 +242,17 @@ pub extern "C" fn call() {
         ENTRY_POINT_ADD_SIGNER,
         vec![
             Parameter::new("signer", String::cl_type()),
+        ],
+        CLType::Unit,
+        EntryPointAccess::Public,
+        EntryPointType::Contract,
+    ));
+
+    bridge_pool_entry_points.add_entry_point(EntryPoint::new(
+        ENTRY_POINT_WITHDRAW,
+        vec![
+            Parameter::new("amount", U256::cl_type()),
+            Parameter::new("token_address", String::cl_type()),
         ],
         CLType::Unit,
         EntryPointAccess::Public,
