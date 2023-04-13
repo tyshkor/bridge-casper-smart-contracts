@@ -126,14 +126,14 @@ mod tests {
         let bridge_pool_contract_package_hash = get_bridge_pool_contract_package_hash(&builder);
 
         let bridge_pool_contract_hash = get_bridge_pool_contract_hash(&builder);
-    
+
         let bridge_pool_contract_key: Key = bridge_pool_contract_package_hash.into();
-    
+
         let approve_args = runtime_args! {
             "spender" => bridge_pool_contract_key,
             "amount" => U256::from(10i64),
         };
-    
+
         let approve_request = ExecuteRequestBuilder::contract_call_by_hash(
             *DEFAULT_ACCOUNT_ADDR,
             erc20_contract_hash,
@@ -141,31 +141,42 @@ mod tests {
             approve_args,
         )
         .build();
-    
+
         builder.exec(approve_request).expect_success().commit();
-    
-        let actual_allowance = allowance_dictionary(&builder,
+
+        let actual_allowance = allowance_dictionary(
+            &builder,
             erc20_contract_key,
             Key::Account(*DEFAULT_ACCOUNT_ADDR),
-            bridge_pool_contract_key
+            bridge_pool_contract_key,
         );
-    
+
         assert_eq!(actual_allowance, U256::from(10i64));
 
         let erc20_contract_package_hash = get_erc20_contract_package_hash(&builder);
 
-        println!("erc20_contract_package_hash.to_formatted_string() is {}", erc20_contract_package_hash.to_formatted_string());
-        println!("bridge_pool_contract_package_hash.to_formatted_string() is {}", bridge_pool_contract_package_hash.to_formatted_string());
-        println!("bridge_pool_contract_hash.to_formatted_string() is {}", bridge_pool_contract_hash.to_formatted_string());
+        println!(
+            "erc20_contract_package_hash.to_formatted_string() is {}",
+            erc20_contract_package_hash.to_formatted_string()
+        );
+        println!(
+            "bridge_pool_contract_package_hash.to_formatted_string() is {}",
+            bridge_pool_contract_package_hash.to_formatted_string()
+        );
+        println!(
+            "bridge_pool_contract_hash.to_formatted_string() is {}",
+            bridge_pool_contract_hash.to_formatted_string()
+        );
 
         let erc20_contract_package_hash_string = erc20_contract_package_hash.to_formatted_string();
-        let bridge_pool_contract_package_hash_string = bridge_pool_contract_package_hash.to_formatted_string();
+        let bridge_pool_contract_package_hash_string =
+            bridge_pool_contract_package_hash.to_formatted_string();
         let add_liquidity_args = runtime_args! {
             "amount" => U256::from(1i64),
             "token_address" => erc20_contract_package_hash_string,
             "bridge_pool_contract_package_hash" => bridge_pool_contract_package_hash_string ,
         };
-    
+
         let add_liquidity_request = ExecuteRequestBuilder::contract_call_by_hash(
             *DEFAULT_ACCOUNT_ADDR,
             bridge_pool_contract_hash,
@@ -173,9 +184,11 @@ mod tests {
             add_liquidity_args,
         )
         .build();
-    
-        builder.exec(add_liquidity_request).expect_success().commit();
 
+        builder
+            .exec(add_liquidity_request)
+            .expect_success()
+            .commit();
     }
 
     // #[test]
