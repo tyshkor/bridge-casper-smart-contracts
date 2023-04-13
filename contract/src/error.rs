@@ -42,6 +42,13 @@ pub enum Error {
     EcdsaPublicKeyRecoveryFail = 37,
     MessageHashHexDecodingFail = 38,
     PublicKeyTryIntoFail = 39,
+
+    ACCOUNT_HASH_LIQUIDITIES_DICTFail = 40,
+    HASH_ADDR_LIQUIDITIES_DICTFail = 41,
+    ALLOWED_TARGETS_DICTFail = 42,
+    USED_HASHES_DICTFail = 43,
+    SIGNERS_DICTFail = 44,
+    TOKEN_CONTRACT_PACKAGE_HASH_DICT_NAMEFail = 45,
 }
 
 impl From<Error> for ApiError {

@@ -59,12 +59,12 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
             detail::get_immediate_caller_address().unwrap_or_revert_with(Error::NegativeReward);
 
         let bridge_pool_instance = BrigdePool::instance();
-        bridge_pool_instance.add_liquidity(
-            bridge_pool_contract_package_hash,
-            token_contract_package_hash,
-            client_address,
-            amount,
-        )?;
+        // bridge_pool_instance.add_liquidity(
+        //     bridge_pool_contract_package_hash,
+        //     token_contract_package_hash,
+        //     client_address,
+        //     amount,
+        // )?;
 
         self.emit(BridgePoolEvent::BridgeLiquidityAdded {
             actor: client_address,
