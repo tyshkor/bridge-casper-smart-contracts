@@ -442,7 +442,7 @@ mod tests {
             remove_liquidity_args,
         )
         .build();
-    
+
         builder
             .exec(remove_liquidity_request)
             .expect_success()
@@ -587,7 +587,7 @@ mod tests {
             withdraw_liquidity_args,
         )
         .build();
-    
+
         builder
             .exec(withdraw_liquidity_request)
             .expect_success()
@@ -684,7 +684,6 @@ mod tests {
 
         let erc20_contract_package_hash = get_erc20_contract_package_hash(&builder);
 
-
         let erc20_contract_package_hash_string = erc20_contract_package_hash.to_formatted_string();
         let bridge_pool_contract_package_hash_string =
             bridge_pool_contract_package_hash.to_formatted_string();
@@ -700,10 +699,7 @@ mod tests {
         )
         .build();
 
-        builder
-            .exec(add_signer_request)
-            .expect_success()
-            .commit();
+        builder.exec(add_signer_request).expect_success().commit();
     }
 
     #[test]
@@ -853,10 +849,7 @@ mod tests {
         )
         .build();
 
-        builder
-            .exec(add_signer_request)
-            .expect_success()
-            .commit();
+        builder.exec(add_signer_request).expect_success().commit();
 
         let withdraw_signed_request = ExecuteRequestBuilder::contract_call_by_hash(
             *DEFAULT_ACCOUNT_ADDR,
@@ -865,7 +858,7 @@ mod tests {
             withdraw_signed_args,
         )
         .build();
-    
+
         builder
             .exec(withdraw_signed_request)
             .expect_success()
@@ -962,7 +955,6 @@ mod tests {
 
         let erc20_contract_package_hash = get_erc20_contract_package_hash(&builder);
 
-
         let erc20_contract_package_hash_string = erc20_contract_package_hash.to_formatted_string();
         let bridge_pool_contract_package_hash_string =
             bridge_pool_contract_package_hash.to_formatted_string();
@@ -981,10 +973,7 @@ mod tests {
         )
         .build();
 
-        builder
-            .exec(allow_target_request)
-            .expect_success()
-            .commit();
+        builder.exec(allow_target_request).expect_success().commit();
     }
 
     #[test]
@@ -1077,7 +1066,6 @@ mod tests {
 
         let erc20_contract_package_hash = get_erc20_contract_package_hash(&builder);
 
-
         let erc20_contract_package_hash_string = erc20_contract_package_hash.to_formatted_string();
         let bridge_pool_contract_package_hash_string =
             bridge_pool_contract_package_hash.to_formatted_string();
@@ -1129,10 +1117,7 @@ mod tests {
         )
         .build();
 
-        builder
-            .exec(allow_target_request)
-            .expect_success()
-            .commit();
+        builder.exec(allow_target_request).expect_success().commit();
 
         let swap_args = runtime_args! {
             "token_address" => erc20_contract_package_hash.to_formatted_string(),
@@ -1149,10 +1134,7 @@ mod tests {
         )
         .build();
 
-        builder
-            .exec(swap_request)
-            .expect_success()
-            .commit();
+        builder.exec(swap_request).expect_success().commit();
     }
 
     /// Creates a dictionary item key for an (owner, spender) pair.
