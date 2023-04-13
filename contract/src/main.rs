@@ -15,12 +15,12 @@ use casper_contract::{
     contract_api::{runtime, storage},
     unwrap_or_revert::UnwrapOrRevert,
 };
+use casper_types::Key;
+use casper_types::RuntimeArgs;
 use casper_types::{
     contracts::{EntryPoint, EntryPointAccess, EntryPointType, EntryPoints, NamedKeys},
-    CLType, CLTyped, CLValue, Parameter, U256, runtime_args, ContractPackageHash,
+    runtime_args, CLType, CLTyped, CLValue, ContractPackageHash, Parameter, U256,
 };
-use casper_types::RuntimeArgs;
-use casper_types::Key;
 use contract_utils::{ContractContext, OnChainContractStorage};
 
 const ENTRY_POINT_GET_LIQUIDITY: &str = "get_liquidity";
