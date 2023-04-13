@@ -17,8 +17,10 @@ use casper_contract::{
 };
 use casper_types::{
     contracts::{EntryPoint, EntryPointAccess, EntryPointType, EntryPoints, NamedKeys},
-    CLType, CLTyped, CLValue, Parameter, U256,
+    CLType, CLTyped, CLValue, Parameter, U256, runtime_args, ContractPackageHash,
 };
+use casper_types::RuntimeArgs;
+use casper_types::Key;
 use contract_utils::{ContractContext, OnChainContractStorage};
 
 const ENTRY_POINT_GET_LIQUIDITY: &str = "get_liquidity";
@@ -52,13 +54,13 @@ impl Contract {
 
 #[no_mangle]
 pub extern "C" fn constructor() {
-    // let bridge_pool_contract_package_hash =
-    //     runtime::get_named_arg::<Key>("bridge_pool_contract_package_hash");
+    let bridge_pool_contract_package_hash =
+        runtime::get_named_arg::<Key>("bridge_pool_contract_package_hash");
 
-    // runtime::put_key(
-    //     "bridge_pool_contract_package_hash",
-    //     bridge_pool_contract_package_hash,
-    // );
+    runtime::put_key(
+        "bridge_pool_contract_package_hash",
+        bridge_pool_contract_package_hash,
+    );
 
     Contract::default().constructor();
 }
@@ -273,22 +275,24 @@ pub extern "C" fn call() {
 
     runtime::put_key("bridge_pool_contract_hash", stored_contract_hash.into());
 
-    // let package_hash: ContractPackageHash = ContractPackageHash::new(
-    //     runtime::get_key("contract_package_hash")
-    //         .unwrap_or_revert()
-    //         .into_hash()
-    //         .unwrap_or_revert(),
-    // );
+    let package_hash: ContractPackageHash = ContractPackageHash::new(
+        runtime::get_key("bridge_pool_package_name")
+            .unwrap_or_revert()
+            .into_hash()
+            .unwrap_or_revert(),
+    );
 
-    // let package_hash_key: Key = package_hash.into();
+    let package_hash_key: Key = package_hash.into();
 
-    // let _: () = runtime::call_contract(
-    //     stored_contract_hash,
-    //     "constructor",
-    //     runtime_args! {
-    //         "bridge_pool_contract_package_hash" => package_hash_key,
-    //     },
-    // );
+    let _: () = runtime::call_contract(
+        stored_contract_hash,
+        "constructor",
+        runtime_args! {
+            "bridge_pool_contract_package_hash" => package_hash_key,
+        },
+    );
+
+    runtime::put_key("bridge_pool_contract_package_hash", package_hash_key.into());
 
     /* To create a locked contract instead, use new_locked_contract and throw away the contract version returned
     let (stored_contract_hash, _) =

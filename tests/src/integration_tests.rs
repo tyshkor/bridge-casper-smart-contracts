@@ -92,37 +92,6 @@ mod tests {
             .expect_success()
             .commit();
 
-        // let contract_hash = builder
-        //     .get_expected_account(*DEFAULT_ACCOUNT_ADDR)
-        //     .named_keys()
-        //     .get(CONTRACT_KEY)
-        //     .expect("must have contract hash key as part of contract creation")
-        //     .into_hash()
-        //     .map(ContractHash::new)
-        //     .expect("must get contract hash");
-
-        // // Verify the first contract version is 1. We'll check this when we upgrade later
-
-        // let account = builder
-        //     .get_account(*DEFAULT_ACCOUNT_ADDR)
-        //     .expect("should have account");
-
-        // let version_key = *account
-        //     .named_keys()
-        //     .get(CONTRACT_VERSION_KEY)
-        //     .expect("version uref should exist");
-
-        // let version = builder
-        //     .query(None, version_key, &[])
-        //     .expect("should be stored value.")
-        //     .as_cl_value()
-        //     .expect("should be cl value.")
-        //     .clone()
-        //     .into_t::<u32>()
-        //     .expect("should be u32.");
-
-        // assert_eq!(version, 1);
-
         let bridge_pool_contract_package_hash = get_bridge_pool_contract_package_hash(&builder);
 
         let bridge_pool_contract_hash = get_bridge_pool_contract_hash(&builder);
@@ -191,10 +160,51 @@ mod tests {
             .commit();
     }
 
-    // #[test]
-    fn should_be_able_to_install_and_add_liquidity_and_remove_liquidity() {
+    #[test]
+    fn should_be_able_to_install_and_get_liquidity() {
         let mut builder = InMemoryWasmTestBuilder::default();
-        builder.run_genesis(&*DEFAULT_RUN_GENESIS_REQUEST).commit();
+        builder.run_genesis(&DEFAULT_RUN_GENESIS_REQUEST).commit();
+
+        let erc20_runtime_args = runtime_args! {
+            "name" => "FERRUM_ERC20".to_string(),
+            "symbol" => "F_ERC20".to_string(),
+            "total_supply" => U256::from(500000i64),
+            "decimals" => 8u8,
+        };
+
+        let erc_20_install_request =
+            ExecuteRequestBuilder::standard(*DEFAULT_ACCOUNT_ADDR, ERC20_WASM, erc20_runtime_args)
+                .build();
+
+        builder
+            .exec(erc_20_install_request)
+            .expect_success()
+            .commit();
+
+        let erc20_contract_hash = get_erc20_contract_hash(&builder);
+
+        println!(
+            "erc20_contract_hash {:?}",
+            erc20_contract_hash.to_formatted_string()
+        );
+        let mint_request = ExecuteRequestBuilder::contract_call_by_hash(
+            *DEFAULT_ACCOUNT_ADDR,
+            erc20_contract_hash,
+            "mint",
+            runtime_args! {},
+        )
+        .build();
+
+        builder.exec(mint_request).expect_success().commit();
+
+        let erc20_contract_key: Key = erc20_contract_hash.into();
+
+        let balance = balance_dictionary(
+            &builder,
+            erc20_contract_key,
+            Key::Account(*DEFAULT_ACCOUNT_ADDR),
+        );
+        assert_eq!(balance, U256::from(510000u64));
 
         let contract_installation_request = ExecuteRequestBuilder::standard(
             *DEFAULT_ACCOUNT_ADDR,
@@ -208,82 +218,941 @@ mod tests {
             .expect_success()
             .commit();
 
-        let contract_hash = builder
-            .get_expected_account(*DEFAULT_ACCOUNT_ADDR)
-            .named_keys()
-            .get(CONTRACT_KEY)
-            .expect("must have contract hash key as part of contract creation")
-            .into_hash()
-            .map(ContractHash::new)
-            .expect("must get contract hash");
+        let bridge_pool_contract_package_hash = get_bridge_pool_contract_package_hash(&builder);
 
-        // Verify the first contract version is 1. We'll check this when we upgrade later
+        let bridge_pool_contract_hash = get_bridge_pool_contract_hash(&builder);
 
-        let account = builder
-            .get_account(*DEFAULT_ACCOUNT_ADDR)
-            .expect("should have account");
+        let bridge_pool_contract_key: Key = bridge_pool_contract_package_hash.into();
 
-        let version_key = *account
-            .named_keys()
-            .get(CONTRACT_VERSION_KEY)
-            .expect("version uref should exist");
+        let approve_args = runtime_args! {
+            "spender" => bridge_pool_contract_key,
+            "amount" => U256::from(10i64),
+        };
 
-        let version = builder
-            .query(None, version_key, &[])
-            .expect("should be stored value.")
-            .as_cl_value()
-            .expect("should be cl value.")
-            .clone()
-            .into_t::<u32>()
-            .expect("should be u32.");
-
-        assert_eq!(version, 1);
-
-        // Verify the initial value of count is 0
-
-        let contract = builder
-            .get_contract(contract_hash)
-            .expect("this contract should exist");
-
-        let liquidity_key = *contract
-            .named_keys()
-            .get(LIQUIDITY_KEY)
-            .expect("count uref should exis in the contract named keys");
-
-        let count = builder
-            .query(None, liquidity_key, &[])
-            .expect("should be stored value.")
-            .as_cl_value()
-            .expect("should be cl value.")
-            .clone()
-            .into_t::<i32>()
-            .expect("should be i32.");
-
-        assert_eq!(count, 0);
-
-        // Use session code to increment the counter
-
-        let session_code_request = ExecuteRequestBuilder::standard(
+        let approve_request = ExecuteRequestBuilder::contract_call_by_hash(
             *DEFAULT_ACCOUNT_ADDR,
-            COUNTER_CALL_WASM,
-            runtime_args! {
-                CONTRACT_KEY => contract_hash
-            },
+            erc20_contract_hash,
+            "approve",
+            approve_args,
         )
         .build();
 
-        builder.exec(session_code_request).expect_success().commit();
+        builder.exec(approve_request).expect_success().commit();
 
-        let incremented_count = builder
-            .query(None, liquidity_key, &[])
-            .expect("should be stored value.")
-            .as_cl_value()
-            .expect("should be cl value.")
-            .clone()
-            .into_t::<i32>()
-            .expect("should be i32.");
+        let actual_allowance = allowance_dictionary(
+            &builder,
+            erc20_contract_key,
+            Key::Account(*DEFAULT_ACCOUNT_ADDR),
+            bridge_pool_contract_key,
+        );
 
-        assert_eq!(incremented_count, 1);
+        assert_eq!(actual_allowance, U256::from(10i64));
+
+        let erc20_contract_package_hash = get_erc20_contract_package_hash(&builder);
+
+        println!(
+            "erc20_contract_package_hash.to_formatted_string() is {}",
+            erc20_contract_package_hash.to_formatted_string()
+        );
+        println!(
+            "bridge_pool_contract_package_hash.to_formatted_string() is {}",
+            bridge_pool_contract_package_hash.to_formatted_string()
+        );
+        println!(
+            "bridge_pool_contract_hash.to_formatted_string() is {}",
+            bridge_pool_contract_hash.to_formatted_string()
+        );
+
+        let erc20_contract_package_hash_string = erc20_contract_package_hash.to_formatted_string();
+        let bridge_pool_contract_package_hash_string =
+            bridge_pool_contract_package_hash.to_formatted_string();
+
+        let add_liquidity_args = runtime_args! {
+            "amount" => U256::from(1i64),
+            "token_address" => erc20_contract_package_hash_string.clone(),
+            "bridge_pool_contract_package_hash" => bridge_pool_contract_package_hash_string ,
+        };
+
+        let add_liquidity_request = ExecuteRequestBuilder::contract_call_by_hash(
+            *DEFAULT_ACCOUNT_ADDR,
+            bridge_pool_contract_hash,
+            "add_liquidity",
+            add_liquidity_args,
+        )
+        .build();
+
+        builder
+            .exec(add_liquidity_request)
+            .expect_success()
+            .commit();
+
+        let get_liquidity_args = runtime_args! {
+            "token_address" => erc20_contract_package_hash_string,
+        };
+
+        let get_liquidity_request = ExecuteRequestBuilder::contract_call_by_hash(
+            *DEFAULT_ACCOUNT_ADDR,
+            bridge_pool_contract_hash,
+            "get_liquidity",
+            get_liquidity_args,
+        )
+        .build();
+
+        builder
+            .exec(get_liquidity_request)
+            .expect_success()
+            .commit();
+    }
+
+    #[test]
+    fn should_be_able_to_install_and_add_liquidity_and_remove_liquidity() {
+        let mut builder = InMemoryWasmTestBuilder::default();
+        builder.run_genesis(&DEFAULT_RUN_GENESIS_REQUEST).commit();
+
+        let erc20_runtime_args = runtime_args! {
+            "name" => "FERRUM_ERC20".to_string(),
+            "symbol" => "F_ERC20".to_string(),
+            "total_supply" => U256::from(500000i64),
+            "decimals" => 8u8,
+        };
+
+        let erc_20_install_request =
+            ExecuteRequestBuilder::standard(*DEFAULT_ACCOUNT_ADDR, ERC20_WASM, erc20_runtime_args)
+                .build();
+
+        builder
+            .exec(erc_20_install_request)
+            .expect_success()
+            .commit();
+
+        let erc20_contract_hash = get_erc20_contract_hash(&builder);
+
+        println!(
+            "erc20_contract_hash {:?}",
+            erc20_contract_hash.to_formatted_string()
+        );
+        let mint_request = ExecuteRequestBuilder::contract_call_by_hash(
+            *DEFAULT_ACCOUNT_ADDR,
+            erc20_contract_hash,
+            "mint",
+            runtime_args! {},
+        )
+        .build();
+
+        builder.exec(mint_request).expect_success().commit();
+
+        let erc20_contract_key: Key = erc20_contract_hash.into();
+
+        let balance = balance_dictionary(
+            &builder,
+            erc20_contract_key,
+            Key::Account(*DEFAULT_ACCOUNT_ADDR),
+        );
+        assert_eq!(balance, U256::from(510000u64));
+
+        let contract_installation_request = ExecuteRequestBuilder::standard(
+            *DEFAULT_ACCOUNT_ADDR,
+            BRIDGE_POOL_WASM,
+            runtime_args! {},
+        )
+        .build();
+
+        builder
+            .exec(contract_installation_request)
+            .expect_success()
+            .commit();
+
+        let bridge_pool_contract_package_hash = get_bridge_pool_contract_package_hash(&builder);
+
+        let bridge_pool_contract_hash = get_bridge_pool_contract_hash(&builder);
+
+        let bridge_pool_contract_key: Key = bridge_pool_contract_package_hash.into();
+
+        let approve_args = runtime_args! {
+            "spender" => bridge_pool_contract_key,
+            "amount" => U256::from(10i64),
+        };
+
+        let approve_request = ExecuteRequestBuilder::contract_call_by_hash(
+            *DEFAULT_ACCOUNT_ADDR,
+            erc20_contract_hash,
+            "approve",
+            approve_args,
+        )
+        .build();
+
+        builder.exec(approve_request).expect_success().commit();
+
+        let actual_allowance = allowance_dictionary(
+            &builder,
+            erc20_contract_key,
+            Key::Account(*DEFAULT_ACCOUNT_ADDR),
+            bridge_pool_contract_key,
+        );
+
+        assert_eq!(actual_allowance, U256::from(10i64));
+
+        let erc20_contract_package_hash = get_erc20_contract_package_hash(&builder);
+
+        println!(
+            "erc20_contract_package_hash.to_formatted_string() is {}",
+            erc20_contract_package_hash.to_formatted_string()
+        );
+        println!(
+            "bridge_pool_contract_package_hash.to_formatted_string() is {}",
+            bridge_pool_contract_package_hash.to_formatted_string()
+        );
+        println!(
+            "bridge_pool_contract_hash.to_formatted_string() is {}",
+            bridge_pool_contract_hash.to_formatted_string()
+        );
+
+        let erc20_contract_package_hash_string = erc20_contract_package_hash.to_formatted_string();
+        let bridge_pool_contract_package_hash_string =
+            bridge_pool_contract_package_hash.to_formatted_string();
+
+        let add_liquidity_args = runtime_args! {
+            "amount" => U256::from(1i64),
+            "token_address" => erc20_contract_package_hash_string.clone(),
+            "bridge_pool_contract_package_hash" => bridge_pool_contract_package_hash_string ,
+        };
+
+        let add_liquidity_request = ExecuteRequestBuilder::contract_call_by_hash(
+            *DEFAULT_ACCOUNT_ADDR,
+            bridge_pool_contract_hash,
+            "add_liquidity",
+            add_liquidity_args,
+        )
+        .build();
+
+        let remove_liquidity_args = runtime_args! {
+            "amount" => U256::from(1i64),
+            "token_address" => erc20_contract_package_hash_string,
+        };
+
+        builder
+            .exec(add_liquidity_request)
+            .expect_success()
+            .commit();
+
+        let remove_liquidity_request = ExecuteRequestBuilder::contract_call_by_hash(
+            *DEFAULT_ACCOUNT_ADDR,
+            bridge_pool_contract_hash,
+            "remove_liquidity",
+            remove_liquidity_args,
+        )
+        .build();
+    
+        builder
+            .exec(remove_liquidity_request)
+            .expect_success()
+            .commit();
+    }
+
+    #[test]
+    fn should_be_able_to_install_and_add_liquidity_and_withdraw() {
+        let mut builder = InMemoryWasmTestBuilder::default();
+        builder.run_genesis(&DEFAULT_RUN_GENESIS_REQUEST).commit();
+
+        let erc20_runtime_args = runtime_args! {
+            "name" => "FERRUM_ERC20".to_string(),
+            "symbol" => "F_ERC20".to_string(),
+            "total_supply" => U256::from(500000i64),
+            "decimals" => 8u8,
+        };
+
+        let erc_20_install_request =
+            ExecuteRequestBuilder::standard(*DEFAULT_ACCOUNT_ADDR, ERC20_WASM, erc20_runtime_args)
+                .build();
+
+        builder
+            .exec(erc_20_install_request)
+            .expect_success()
+            .commit();
+
+        let erc20_contract_hash = get_erc20_contract_hash(&builder);
+
+        println!(
+            "erc20_contract_hash {:?}",
+            erc20_contract_hash.to_formatted_string()
+        );
+        let mint_request = ExecuteRequestBuilder::contract_call_by_hash(
+            *DEFAULT_ACCOUNT_ADDR,
+            erc20_contract_hash,
+            "mint",
+            runtime_args! {},
+        )
+        .build();
+
+        builder.exec(mint_request).expect_success().commit();
+
+        let erc20_contract_key: Key = erc20_contract_hash.into();
+
+        let balance = balance_dictionary(
+            &builder,
+            erc20_contract_key,
+            Key::Account(*DEFAULT_ACCOUNT_ADDR),
+        );
+        assert_eq!(balance, U256::from(510000u64));
+
+        let contract_installation_request = ExecuteRequestBuilder::standard(
+            *DEFAULT_ACCOUNT_ADDR,
+            BRIDGE_POOL_WASM,
+            runtime_args! {},
+        )
+        .build();
+
+        builder
+            .exec(contract_installation_request)
+            .expect_success()
+            .commit();
+
+        let bridge_pool_contract_package_hash = get_bridge_pool_contract_package_hash(&builder);
+
+        let bridge_pool_contract_hash = get_bridge_pool_contract_hash(&builder);
+
+        let bridge_pool_contract_key: Key = bridge_pool_contract_package_hash.into();
+
+        let approve_args = runtime_args! {
+            "spender" => bridge_pool_contract_key,
+            "amount" => U256::from(10i64),
+        };
+
+        let approve_request = ExecuteRequestBuilder::contract_call_by_hash(
+            *DEFAULT_ACCOUNT_ADDR,
+            erc20_contract_hash,
+            "approve",
+            approve_args,
+        )
+        .build();
+
+        builder.exec(approve_request).expect_success().commit();
+
+        let actual_allowance = allowance_dictionary(
+            &builder,
+            erc20_contract_key,
+            Key::Account(*DEFAULT_ACCOUNT_ADDR),
+            bridge_pool_contract_key,
+        );
+
+        assert_eq!(actual_allowance, U256::from(10i64));
+
+        let erc20_contract_package_hash = get_erc20_contract_package_hash(&builder);
+
+        println!(
+            "erc20_contract_package_hash.to_formatted_string() is {}",
+            erc20_contract_package_hash.to_formatted_string()
+        );
+        println!(
+            "bridge_pool_contract_package_hash.to_formatted_string() is {}",
+            bridge_pool_contract_package_hash.to_formatted_string()
+        );
+        println!(
+            "bridge_pool_contract_hash.to_formatted_string() is {}",
+            bridge_pool_contract_hash.to_formatted_string()
+        );
+
+        let erc20_contract_package_hash_string = erc20_contract_package_hash.to_formatted_string();
+        let bridge_pool_contract_package_hash_string =
+            bridge_pool_contract_package_hash.to_formatted_string();
+
+        let add_liquidity_args = runtime_args! {
+            "amount" => U256::from(1i64),
+            "token_address" => erc20_contract_package_hash_string.clone(),
+            "bridge_pool_contract_package_hash" => bridge_pool_contract_package_hash_string ,
+        };
+
+        let add_liquidity_request = ExecuteRequestBuilder::contract_call_by_hash(
+            *DEFAULT_ACCOUNT_ADDR,
+            bridge_pool_contract_hash,
+            "add_liquidity",
+            add_liquidity_args,
+        )
+        .build();
+
+        let withdraw_liquidity_args = runtime_args! {
+            "amount" => U256::from(1i64),
+            "token_address" => erc20_contract_package_hash_string,
+        };
+
+        builder
+            .exec(add_liquidity_request)
+            .expect_success()
+            .commit();
+
+        let withdraw_liquidity_request = ExecuteRequestBuilder::contract_call_by_hash(
+            *DEFAULT_ACCOUNT_ADDR,
+            bridge_pool_contract_hash,
+            "withdraw",
+            withdraw_liquidity_args,
+        )
+        .build();
+    
+        builder
+            .exec(withdraw_liquidity_request)
+            .expect_success()
+            .commit();
+    }
+
+    #[test]
+    fn should_be_able_to_install_and_add_signer() {
+        let mut builder = InMemoryWasmTestBuilder::default();
+        builder.run_genesis(&DEFAULT_RUN_GENESIS_REQUEST).commit();
+
+        let erc20_runtime_args = runtime_args! {
+            "name" => "FERRUM_ERC20".to_string(),
+            "symbol" => "F_ERC20".to_string(),
+            "total_supply" => U256::from(500000i64),
+            "decimals" => 8u8,
+        };
+
+        let erc_20_install_request =
+            ExecuteRequestBuilder::standard(*DEFAULT_ACCOUNT_ADDR, ERC20_WASM, erc20_runtime_args)
+                .build();
+
+        builder
+            .exec(erc_20_install_request)
+            .expect_success()
+            .commit();
+
+        let erc20_contract_hash = get_erc20_contract_hash(&builder);
+
+        println!(
+            "erc20_contract_hash {:?}",
+            erc20_contract_hash.to_formatted_string()
+        );
+        let mint_request = ExecuteRequestBuilder::contract_call_by_hash(
+            *DEFAULT_ACCOUNT_ADDR,
+            erc20_contract_hash,
+            "mint",
+            runtime_args! {},
+        )
+        .build();
+
+        builder.exec(mint_request).expect_success().commit();
+
+        let erc20_contract_key: Key = erc20_contract_hash.into();
+
+        let balance = balance_dictionary(
+            &builder,
+            erc20_contract_key,
+            Key::Account(*DEFAULT_ACCOUNT_ADDR),
+        );
+        assert_eq!(balance, U256::from(510000u64));
+
+        let contract_installation_request = ExecuteRequestBuilder::standard(
+            *DEFAULT_ACCOUNT_ADDR,
+            BRIDGE_POOL_WASM,
+            runtime_args! {},
+        )
+        .build();
+
+        builder
+            .exec(contract_installation_request)
+            .expect_success()
+            .commit();
+
+        let bridge_pool_contract_package_hash = get_bridge_pool_contract_package_hash(&builder);
+
+        let bridge_pool_contract_hash = get_bridge_pool_contract_hash(&builder);
+
+        let bridge_pool_contract_key: Key = bridge_pool_contract_package_hash.into();
+
+        let approve_args = runtime_args! {
+            "spender" => bridge_pool_contract_key,
+            "amount" => U256::from(10i64),
+        };
+
+        let approve_request = ExecuteRequestBuilder::contract_call_by_hash(
+            *DEFAULT_ACCOUNT_ADDR,
+            erc20_contract_hash,
+            "approve",
+            approve_args,
+        )
+        .build();
+
+        builder.exec(approve_request).expect_success().commit();
+
+        let actual_allowance = allowance_dictionary(
+            &builder,
+            erc20_contract_key,
+            Key::Account(*DEFAULT_ACCOUNT_ADDR),
+            bridge_pool_contract_key,
+        );
+
+        assert_eq!(actual_allowance, U256::from(10i64));
+
+        let erc20_contract_package_hash = get_erc20_contract_package_hash(&builder);
+
+
+        let erc20_contract_package_hash_string = erc20_contract_package_hash.to_formatted_string();
+        let bridge_pool_contract_package_hash_string =
+            bridge_pool_contract_package_hash.to_formatted_string();
+        let add_signer_args = runtime_args! {
+            "signer" => "cde782dee9643b02dde8a11499ede81ec1d05dd3".to_string() ,
+        };
+
+        let add_signer_request = ExecuteRequestBuilder::contract_call_by_hash(
+            *DEFAULT_ACCOUNT_ADDR,
+            bridge_pool_contract_hash,
+            "add_signer",
+            add_signer_args,
+        )
+        .build();
+
+        builder
+            .exec(add_signer_request)
+            .expect_success()
+            .commit();
+    }
+
+    #[test]
+    fn should_be_able_to_install_and_add_liquidity_and_withdraw_signed() {
+        let mut builder = InMemoryWasmTestBuilder::default();
+        builder.run_genesis(&DEFAULT_RUN_GENESIS_REQUEST).commit();
+
+        let erc20_runtime_args = runtime_args! {
+            "name" => "FERRUM_ERC20".to_string(),
+            "symbol" => "F_ERC20".to_string(),
+            "total_supply" => U256::from(500000i64),
+            "decimals" => 8u8,
+        };
+
+        let erc_20_install_request =
+            ExecuteRequestBuilder::standard(*DEFAULT_ACCOUNT_ADDR, ERC20_WASM, erc20_runtime_args)
+                .build();
+
+        builder
+            .exec(erc_20_install_request)
+            .expect_success()
+            .commit();
+
+        let erc20_contract_hash = get_erc20_contract_hash(&builder);
+
+        println!(
+            "erc20_contract_hash {:?}",
+            erc20_contract_hash.to_formatted_string()
+        );
+        let mint_request = ExecuteRequestBuilder::contract_call_by_hash(
+            *DEFAULT_ACCOUNT_ADDR,
+            erc20_contract_hash,
+            "mint",
+            runtime_args! {},
+        )
+        .build();
+
+        builder.exec(mint_request).expect_success().commit();
+
+        let erc20_contract_key: Key = erc20_contract_hash.into();
+
+        let balance = balance_dictionary(
+            &builder,
+            erc20_contract_key,
+            Key::Account(*DEFAULT_ACCOUNT_ADDR),
+        );
+        assert_eq!(balance, U256::from(510000u64));
+
+        let contract_installation_request = ExecuteRequestBuilder::standard(
+            *DEFAULT_ACCOUNT_ADDR,
+            BRIDGE_POOL_WASM,
+            runtime_args! {},
+        )
+        .build();
+
+        builder
+            .exec(contract_installation_request)
+            .expect_success()
+            .commit();
+
+        let bridge_pool_contract_package_hash = get_bridge_pool_contract_package_hash(&builder);
+
+        let bridge_pool_contract_hash = get_bridge_pool_contract_hash(&builder);
+
+        let bridge_pool_contract_key: Key = bridge_pool_contract_package_hash.into();
+
+        let approve_args = runtime_args! {
+            "spender" => bridge_pool_contract_key,
+            "amount" => U256::from(10i64),
+        };
+
+        let approve_request = ExecuteRequestBuilder::contract_call_by_hash(
+            *DEFAULT_ACCOUNT_ADDR,
+            erc20_contract_hash,
+            "approve",
+            approve_args,
+        )
+        .build();
+
+        builder.exec(approve_request).expect_success().commit();
+
+        let actual_allowance = allowance_dictionary(
+            &builder,
+            erc20_contract_key,
+            Key::Account(*DEFAULT_ACCOUNT_ADDR),
+            bridge_pool_contract_key,
+        );
+
+        assert_eq!(actual_allowance, U256::from(10i64));
+
+        let erc20_contract_package_hash = get_erc20_contract_package_hash(&builder);
+
+        println!(
+            "erc20_contract_package_hash.to_formatted_string() is {}",
+            erc20_contract_package_hash.to_formatted_string()
+        );
+        println!(
+            "bridge_pool_contract_package_hash.to_formatted_string() is {}",
+            bridge_pool_contract_package_hash.to_formatted_string()
+        );
+        println!(
+            "bridge_pool_contract_hash.to_formatted_string() is {}",
+            bridge_pool_contract_hash.to_formatted_string()
+        );
+
+        let erc20_contract_package_hash_string = erc20_contract_package_hash.to_formatted_string();
+        let bridge_pool_contract_package_hash_string =
+            bridge_pool_contract_package_hash.to_formatted_string();
+
+        let add_liquidity_args = runtime_args! {
+            "amount" => U256::from(1i64),
+            "token_address" => erc20_contract_package_hash_string.clone(),
+            "bridge_pool_contract_package_hash" => bridge_pool_contract_package_hash_string ,
+        };
+
+        let add_liquidity_request = ExecuteRequestBuilder::contract_call_by_hash(
+            *DEFAULT_ACCOUNT_ADDR,
+            bridge_pool_contract_hash,
+            "add_liquidity",
+            add_liquidity_args,
+        )
+        .build();
+
+        let withdraw_signed_args = runtime_args! {
+            "amount" => U256::from(1i64),
+            "token_address" => erc20_contract_package_hash_string,
+            "payee" => "0Bdb79846e8331A19A65430363f240Ec8aCC2A52".to_string(),
+            "signature" => "b086ec5298630507dc314767a3cdb0d5e38381b11a35096e4f7c8706b51742c100fd299da6b56b33af70482a5656663a3a57d2c52e5442f56d3e948395918f8e1c".to_string(),
+            "salt" => "6b166cc8016d4ddb7a2578245ac9de73bd95f30ea960ab53dec02141623832dd".to_string(),
+            "message_hash" => "a02c88bd2abba0d58c72141d00098448a3da586a2f38a3679525a1cbd0fd60d5".to_string(),
+        };
+
+        builder
+            .exec(add_liquidity_request)
+            .expect_success()
+            .commit();
+
+        let add_signer_args = runtime_args! {
+            "signer" => "cde782dee9643b02dde8a11499ede81ec1d05dd3".to_string() ,
+        };
+
+        let add_signer_request = ExecuteRequestBuilder::contract_call_by_hash(
+            *DEFAULT_ACCOUNT_ADDR,
+            bridge_pool_contract_hash,
+            "add_signer",
+            add_signer_args,
+        )
+        .build();
+
+        builder
+            .exec(add_signer_request)
+            .expect_success()
+            .commit();
+
+        let withdraw_signed_request = ExecuteRequestBuilder::contract_call_by_hash(
+            *DEFAULT_ACCOUNT_ADDR,
+            bridge_pool_contract_hash,
+            "withdraw_signed",
+            withdraw_signed_args,
+        )
+        .build();
+    
+        builder
+            .exec(withdraw_signed_request)
+            .expect_success()
+            .commit();
+    }
+
+    #[test]
+    fn should_be_able_to_install_and_allow_target() {
+        let mut builder = InMemoryWasmTestBuilder::default();
+        builder.run_genesis(&DEFAULT_RUN_GENESIS_REQUEST).commit();
+
+        let erc20_runtime_args = runtime_args! {
+            "name" => "FERRUM_ERC20".to_string(),
+            "symbol" => "F_ERC20".to_string(),
+            "total_supply" => U256::from(500000i64),
+            "decimals" => 8u8,
+        };
+
+        let erc_20_install_request =
+            ExecuteRequestBuilder::standard(*DEFAULT_ACCOUNT_ADDR, ERC20_WASM, erc20_runtime_args)
+                .build();
+
+        builder
+            .exec(erc_20_install_request)
+            .expect_success()
+            .commit();
+
+        let erc20_contract_hash = get_erc20_contract_hash(&builder);
+
+        println!(
+            "erc20_contract_hash {:?}",
+            erc20_contract_hash.to_formatted_string()
+        );
+        let mint_request = ExecuteRequestBuilder::contract_call_by_hash(
+            *DEFAULT_ACCOUNT_ADDR,
+            erc20_contract_hash,
+            "mint",
+            runtime_args! {},
+        )
+        .build();
+
+        builder.exec(mint_request).expect_success().commit();
+
+        let erc20_contract_key: Key = erc20_contract_hash.into();
+
+        let balance = balance_dictionary(
+            &builder,
+            erc20_contract_key,
+            Key::Account(*DEFAULT_ACCOUNT_ADDR),
+        );
+        assert_eq!(balance, U256::from(510000u64));
+
+        let contract_installation_request = ExecuteRequestBuilder::standard(
+            *DEFAULT_ACCOUNT_ADDR,
+            BRIDGE_POOL_WASM,
+            runtime_args! {},
+        )
+        .build();
+
+        builder
+            .exec(contract_installation_request)
+            .expect_success()
+            .commit();
+
+        let bridge_pool_contract_package_hash = get_bridge_pool_contract_package_hash(&builder);
+
+        let bridge_pool_contract_hash = get_bridge_pool_contract_hash(&builder);
+
+        let bridge_pool_contract_key: Key = bridge_pool_contract_package_hash.into();
+
+        let approve_args = runtime_args! {
+            "spender" => bridge_pool_contract_key,
+            "amount" => U256::from(10i64),
+        };
+
+        let approve_request = ExecuteRequestBuilder::contract_call_by_hash(
+            *DEFAULT_ACCOUNT_ADDR,
+            erc20_contract_hash,
+            "approve",
+            approve_args,
+        )
+        .build();
+
+        builder.exec(approve_request).expect_success().commit();
+
+        let actual_allowance = allowance_dictionary(
+            &builder,
+            erc20_contract_key,
+            Key::Account(*DEFAULT_ACCOUNT_ADDR),
+            bridge_pool_contract_key,
+        );
+
+        assert_eq!(actual_allowance, U256::from(10i64));
+
+        let erc20_contract_package_hash = get_erc20_contract_package_hash(&builder);
+
+
+        let erc20_contract_package_hash_string = erc20_contract_package_hash.to_formatted_string();
+        let bridge_pool_contract_package_hash_string =
+            bridge_pool_contract_package_hash.to_formatted_string();
+        let allow_target_args = runtime_args! {
+            "token_address" => "contract-package-wasme222974816f70ca96fc4002a696bb552e2959d3463158cd82a7bfc8a94c03473".to_string() ,
+            "token_name" => "some_unusual_token_name".to_string() ,
+            "target_token" => "qwe".to_string() ,
+            "target_network" => U256::from(1i64),
+        };
+
+        let allow_target_request = ExecuteRequestBuilder::contract_call_by_hash(
+            *DEFAULT_ACCOUNT_ADDR,
+            bridge_pool_contract_hash,
+            "allow_target",
+            allow_target_args,
+        )
+        .build();
+
+        builder
+            .exec(allow_target_request)
+            .expect_success()
+            .commit();
+    }
+
+    #[test]
+    fn should_be_able_to_install_and_add_liquidity_and_swap() {
+        let mut builder = InMemoryWasmTestBuilder::default();
+        builder.run_genesis(&DEFAULT_RUN_GENESIS_REQUEST).commit();
+
+        let erc20_runtime_args = runtime_args! {
+            "name" => "FERRUM_ERC20".to_string(),
+            "symbol" => "F_ERC20".to_string(),
+            "total_supply" => U256::from(500000i64),
+            "decimals" => 8u8,
+        };
+
+        let erc_20_install_request =
+            ExecuteRequestBuilder::standard(*DEFAULT_ACCOUNT_ADDR, ERC20_WASM, erc20_runtime_args)
+                .build();
+
+        builder
+            .exec(erc_20_install_request)
+            .expect_success()
+            .commit();
+
+        let erc20_contract_hash = get_erc20_contract_hash(&builder);
+
+        println!(
+            "erc20_contract_hash {:?}",
+            erc20_contract_hash.to_formatted_string()
+        );
+        let mint_request = ExecuteRequestBuilder::contract_call_by_hash(
+            *DEFAULT_ACCOUNT_ADDR,
+            erc20_contract_hash,
+            "mint",
+            runtime_args! {},
+        )
+        .build();
+
+        builder.exec(mint_request).expect_success().commit();
+
+        let erc20_contract_key: Key = erc20_contract_hash.into();
+
+        let balance = balance_dictionary(
+            &builder,
+            erc20_contract_key,
+            Key::Account(*DEFAULT_ACCOUNT_ADDR),
+        );
+        assert_eq!(balance, U256::from(510000u64));
+
+        let contract_installation_request = ExecuteRequestBuilder::standard(
+            *DEFAULT_ACCOUNT_ADDR,
+            BRIDGE_POOL_WASM,
+            runtime_args! {},
+        )
+        .build();
+
+        builder
+            .exec(contract_installation_request)
+            .expect_success()
+            .commit();
+
+        let bridge_pool_contract_package_hash = get_bridge_pool_contract_package_hash(&builder);
+
+        let bridge_pool_contract_hash = get_bridge_pool_contract_hash(&builder);
+
+        let bridge_pool_contract_key: Key = bridge_pool_contract_package_hash.into();
+
+        let approve_args = runtime_args! {
+            "spender" => bridge_pool_contract_key,
+            "amount" => U256::from(10i64),
+        };
+
+        let approve_request = ExecuteRequestBuilder::contract_call_by_hash(
+            *DEFAULT_ACCOUNT_ADDR,
+            erc20_contract_hash,
+            "approve",
+            approve_args,
+        )
+        .build();
+
+        builder.exec(approve_request).expect_success().commit();
+
+        let actual_allowance = allowance_dictionary(
+            &builder,
+            erc20_contract_key,
+            Key::Account(*DEFAULT_ACCOUNT_ADDR),
+            bridge_pool_contract_key,
+        );
+
+        assert_eq!(actual_allowance, U256::from(10i64));
+
+        let erc20_contract_package_hash = get_erc20_contract_package_hash(&builder);
+
+
+        let erc20_contract_package_hash_string = erc20_contract_package_hash.to_formatted_string();
+        let bridge_pool_contract_package_hash_string =
+            bridge_pool_contract_package_hash.to_formatted_string();
+
+        println!(
+            "erc20_contract_package_hash.to_formatted_string() is {}",
+            erc20_contract_package_hash.to_formatted_string()
+        );
+        println!(
+            "bridge_pool_contract_package_hash.to_formatted_string() is {}",
+            bridge_pool_contract_package_hash.to_formatted_string()
+        );
+        println!(
+            "bridge_pool_contract_hash.to_formatted_string() is {}",
+            bridge_pool_contract_hash.to_formatted_string()
+        );
+
+        let add_liquidity_args = runtime_args! {
+            "amount" => U256::from(1i64),
+            "token_address" => erc20_contract_package_hash_string,
+            "bridge_pool_contract_package_hash" => bridge_pool_contract_package_hash_string ,
+        };
+
+        let add_liquidity_request = ExecuteRequestBuilder::contract_call_by_hash(
+            *DEFAULT_ACCOUNT_ADDR,
+            bridge_pool_contract_hash,
+            "add_liquidity",
+            add_liquidity_args,
+        )
+        .build();
+
+        builder
+            .exec(add_liquidity_request)
+            .expect_success()
+            .commit();
+
+        let allow_target_args = runtime_args! {
+            "token_address" => erc20_contract_package_hash.to_formatted_string(),
+            "token_name" => "some_unusual_token_name".to_string() ,
+            "target_token" => "qwe".to_string() ,
+            "target_network" => U256::from(1i64),
+        };
+
+        let allow_target_request = ExecuteRequestBuilder::contract_call_by_hash(
+            *DEFAULT_ACCOUNT_ADDR,
+            bridge_pool_contract_hash,
+            "allow_target",
+            allow_target_args,
+        )
+        .build();
+
+        builder
+            .exec(allow_target_request)
+            .expect_success()
+            .commit();
+
+        let swap_args = runtime_args! {
+            "token_address" => erc20_contract_package_hash.to_formatted_string(),
+            "target_token" => "qwe".to_string() ,
+            "target_network" => U256::from(1i64),
+            "amount" => U256::from(1i64),
+        };
+
+        let swap_request = ExecuteRequestBuilder::contract_call_by_hash(
+            *DEFAULT_ACCOUNT_ADDR,
+            bridge_pool_contract_hash,
+            "swap",
+            swap_args,
+        )
+        .build();
+
+        builder
+            .exec(swap_request)
+            .expect_success()
+            .commit();
     }
 
     /// Creates a dictionary item key for an (owner, spender) pair.
