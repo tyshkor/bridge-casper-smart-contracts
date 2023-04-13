@@ -142,6 +142,7 @@ pub fn decimals() -> EntryPoint {
     )
 }
 
+/// Mint function
 pub fn mint() -> EntryPoint {
     EntryPoint::new(
         String::from("mint"),

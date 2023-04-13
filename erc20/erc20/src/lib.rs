@@ -24,9 +24,7 @@ pub mod entry_points;
 mod error;
 mod total_supply;
 
-use core::convert::TryInto;
-
-use alloc::{string::{String, ToString}, format};
+use alloc::string::{String, ToString};
 
 use once_cell::unsync::OnceCell;
 
@@ -86,6 +84,7 @@ impl ERC20 {
         balances::write_balance_to(self.balances_uref(), owner, amount)
     }
 
+    #[allow(unused)]
     fn allowances_uref(&self) -> URef {
         *self
             .allowances_uref

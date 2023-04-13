@@ -1,5 +1,4 @@
 //! Error handling on the casper platform.
-use alloc::string::String;
 use casper_types::ApiError;
 
 /// Errors which can be returned by the library.
@@ -24,7 +23,7 @@ pub enum Error {
     Overflow,
     /// User error.
     User(u16),
-
+    /// User allowance error.
     UserAllowance(u16),
 }
 

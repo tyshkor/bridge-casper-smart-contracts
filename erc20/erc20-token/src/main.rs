@@ -7,7 +7,6 @@ compile_error!("target arch should be wasm32: compile with '--target wasm32-unkn
 
 
 extern crate alloc;
-use core::panic::PanicInfo;
 
 use alloc::string::String;
 
