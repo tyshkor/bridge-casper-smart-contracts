@@ -292,7 +292,7 @@ pub extern "C" fn call() {
         },
     );
 
-    runtime::put_key("bridge_pool_contract_package_hash", package_hash_key.into());
+    runtime::put_key("bridge_pool_contract_package_hash", package_hash_key);
 
     /* To create a locked contract instead, use new_locked_contract and throw away the contract version returned
     let (stored_contract_hash, _) =
