@@ -51,6 +51,7 @@ pub struct BrigdePool {
 
 impl BrigdePool {
     pub fn instance() -> BrigdePool {
+        runtime::print("instance");
         // let key = runtime::get_key(ACCOUNT_HASH_LIQUIDITIES_DICT).unwrap_or_revert_with(Error::ACCOUNT_HASH_LIQUIDITIES_DICTFail);
         let _key = runtime::get_key(HASH_ADDR_LIQUIDITIES_DICT)
             .unwrap_or_revert_with(Error::HASH_ADDR_LIQUIDITIES_DICTFail);
@@ -61,6 +62,7 @@ impl BrigdePool {
         let _key = runtime::get_key(SIGNERS_DICT).unwrap_or_revert_with(Error::SIGNERS_DICTFail);
         let _key = runtime::get_key(TOKEN_CONTRACT_PACKAGE_HASH_DICT_NAME)
             .unwrap_or_revert_with(Error::TOKEN_CONTRACT_PACKAGE_HASH_DICT_NAMEFail);
+
         BrigdePool {
             account_hash_liquidities_dict: Dict::instance(ACCOUNT_HASH_LIQUIDITIES_DICT),
             hash_addr_liquidities_dict: Dict::instance(HASH_ADDR_LIQUIDITIES_DICT),
@@ -74,6 +76,7 @@ impl BrigdePool {
     }
 
     pub fn init() {
+        runtime::print("init");
         Dict::init(ACCOUNT_HASH_LIQUIDITIES_DICT);
         Dict::init(HASH_ADDR_LIQUIDITIES_DICT);
         Dict::init(ALLOWED_TARGETS_DICT);

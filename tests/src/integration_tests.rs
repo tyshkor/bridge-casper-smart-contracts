@@ -27,7 +27,7 @@ mod tests {
     const ERC20_CONTRACT_NAME: &str = "erc20_token_contract";
     const ERC20_CONTRACT_PACKAGE_HASH: &str = "erc20-contract_package_hash";
     const BRIDGE_POOL_CONTRACT_HASH: &str = "bridge_pool_contract_hash";
-    const BRIDGE_POOL_CONTRACT_PACKAGE_HASH: &str = "bridge_pool_package_name";
+    const BRIDGE_POOL_CONTRACT_PACKAGE_HASH: &str = "bridge_pool_package_hash";
 
     const CONTRACT_KEY: &str = "bridge_pool"; // Named key referencing this contract
     const LIQUIDITY_KEY: &str = "liquidity"; // Named key referencing the count value
@@ -92,36 +92,36 @@ mod tests {
             .expect_success()
             .commit();
 
-        // let contract_hash = builder
-        //     .get_expected_account(*DEFAULT_ACCOUNT_ADDR)
-        //     .named_keys()
-        //     .get(CONTRACT_KEY)
-        //     .expect("must have contract hash key as part of contract creation")
-        //     .into_hash()
-        //     .map(ContractHash::new)
-        //     .expect("must get contract hash");
+        let contract_hash = builder
+            .get_expected_account(*DEFAULT_ACCOUNT_ADDR)
+            .named_keys()
+            .get(CONTRACT_KEY)
+            .expect("must have contract hash key as part of contract creation")
+            .into_hash()
+            .map(ContractHash::new)
+            .expect("must get contract hash");
 
-        // // Verify the first contract version is 1. We'll check this when we upgrade later
+        // Verify the first contract version is 1. We'll check this when we upgrade later
 
-        // let account = builder
-        //     .get_account(*DEFAULT_ACCOUNT_ADDR)
-        //     .expect("should have account");
+        let account = builder
+            .get_account(*DEFAULT_ACCOUNT_ADDR)
+            .expect("should have account");
 
-        // let version_key = *account
-        //     .named_keys()
-        //     .get(CONTRACT_VERSION_KEY)
-        //     .expect("version uref should exist");
+        let version_key = *account
+            .named_keys()
+            .get(CONTRACT_VERSION_KEY)
+            .expect("version uref should exist");
 
-        // let version = builder
-        //     .query(None, version_key, &[])
-        //     .expect("should be stored value.")
-        //     .as_cl_value()
-        //     .expect("should be cl value.")
-        //     .clone()
-        //     .into_t::<u32>()
-        //     .expect("should be u32.");
+        let version = builder
+            .query(None, version_key, &[])
+            .expect("should be stored value.")
+            .as_cl_value()
+            .expect("should be cl value.")
+            .clone()
+            .into_t::<u32>()
+            .expect("should be u32.");
 
-        // assert_eq!(version, 1);
+        assert_eq!(version, 1);
 
         let bridge_pool_contract_package_hash = get_bridge_pool_contract_package_hash(&builder);
 
@@ -185,10 +185,18 @@ mod tests {
         )
         .build();
 
+        dbg!(builder
+            .get_expected_account(*DEFAULT_ACCOUNT_ADDR)
+            .named_keys());
+
         builder
             .exec(add_liquidity_request)
             .expect_success()
             .commit();
+
+        dbg!(builder
+            .get_expected_account(*DEFAULT_ACCOUNT_ADDR)
+            .named_keys());
     }
 
     // #[test]
