@@ -1,0 +1,34 @@
+name: main
+
+on:
+    push:
+        branches-ignore:
+        - nightly
+    pull_request:
+        branches-ignore:
+        - nightly
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          override: true
+
+      - name: Install dependencies
+        run: sudo apt update && sudo apt install -y build-essential wabt
+
+      - name: Setup
+        run: make prepare
+
+      - name: Run clippy and fmt
+        run: rustup component add clippy --toolchain nightly-x86_64-unknown-linux-gnu ; rustup component add rustfmt --toolchain nightly-x86_64-unknown-linux-gnu ; make check-lint
+
+      - name: Build
+        run: make build-contract

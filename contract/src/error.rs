@@ -38,6 +38,22 @@ pub enum Error {
     SaltHexFail = 33,
     SaltWrongSize = 34,
     SignatureHexFail = 35,
+    NotBridgePoolContractPackageHash = 36,
+    EcdsaPublicKeyRecoveryFail = 37,
+    MessageHashHexDecodingFail = 38,
+    PublicKeyTryIntoFail = 39,
+    #[allow(non_camel_case_types)]
+    ACCOUNT_HASH_LIQUIDITIES_DICTFail = 40,
+    #[allow(non_camel_case_types)]
+    HASH_ADDR_LIQUIDITIES_DICTFail = 41,
+    #[allow(non_camel_case_types)]
+    ALLOWED_TARGETS_DICTFail = 42,
+    #[allow(non_camel_case_types)]
+    USED_HASHES_DICTFail = 43,
+    #[allow(non_camel_case_types)]
+    SIGNERS_DICTFail = 44,
+    #[allow(non_camel_case_types)]
+    TOKEN_CONTRACT_PACKAGE_HASH_DICT_NAMEFail = 45,
 }
 
 impl From<Error> for ApiError {

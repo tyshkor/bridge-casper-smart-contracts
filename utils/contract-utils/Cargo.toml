@@ -5,8 +5,19 @@ authors = ["Maciej Zielinski <maciek.s.zielinski@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-casper-contract = "1.4.4"
+casper-contract = { version = "1.4.4", default-features = false, features = [
+  "test-support",
+] }
 casper-types = "1.5.0"
 hex = { version = "0.4.3", default-features = false }
 tiny-keccak = { version = "2.0.0", features = ["keccak"] }
-# secp256k1 = {version = "0.19", features = ["recovery"]}
+secp256k1 = { version = "0.19", features = ["recovery"] }
+k256 = { version = "0.7.2", default-features = false, features = [
+  "ecdsa",
+  "zeroize",
+  "keccak256",
+] }
+
+[features]
+default = ["std"]
+std = ["casper-contract/std", "casper-types/std"]

@@ -1,0 +1,12 @@
+[workspace]
+members = [
+    "erc20",
+    "erc20-token"
+]
+default-members = [
+    "erc20"
+]
+
+[profile.release]
+codegen-units = 1
+lto = true
