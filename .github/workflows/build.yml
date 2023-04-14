@@ -32,3 +32,6 @@ jobs:
 
       - name: Build
         run: rustup target add wasm32-unknown-unknown ; make build-contract
+
+      - name: Test
+        run: rustup target add wasm32-unknown-unknown ; make build-contract ; make test
