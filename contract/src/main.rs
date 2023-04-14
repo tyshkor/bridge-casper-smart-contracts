@@ -169,7 +169,7 @@ pub extern "C" fn call() {
         "constructor",
         vec![Parameter::new(
             "bridge_pool_contract_package_hash",
-            String::cl_type(),
+            Key::cl_type(),
         )],
         <()>::cl_type(),
         EntryPointAccess::Public,

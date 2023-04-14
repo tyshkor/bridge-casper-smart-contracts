@@ -52,7 +52,7 @@ pub struct BrigdePool {
 impl BrigdePool {
     pub fn instance() -> BrigdePool {
         runtime::print("instance");
-        // let key = runtime::get_key(ACCOUNT_HASH_LIQUIDITIES_DICT).unwrap_or_revert_with(Error::ACCOUNT_HASH_LIQUIDITIES_DICTFail);
+        let key = runtime::get_key(ACCOUNT_HASH_LIQUIDITIES_DICT).unwrap_or_revert_with(Error::ACCOUNT_HASH_LIQUIDITIES_DICTFail);
         let _key = runtime::get_key(HASH_ADDR_LIQUIDITIES_DICT)
             .unwrap_or_revert_with(Error::HASH_ADDR_LIQUIDITIES_DICTFail);
         let _key = runtime::get_key(ALLOWED_TARGETS_DICT)
