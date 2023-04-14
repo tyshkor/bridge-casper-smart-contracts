@@ -240,3 +240,7 @@ casper-client put-deploy \
 If you would like to contribute to this repository, please fork the repository and create a new branch for your changes. Once you have made your changes, submit a pull request and we will review your changes.
 
 Please ensure that your code follows the style and conventions used in the existing codebase, and that it passes all tests before submitting a pull request.
+
+## License
+
+The smart contracts in this repository are licensed under the [MIT License](https://opensource.org/licenses/MIT).
