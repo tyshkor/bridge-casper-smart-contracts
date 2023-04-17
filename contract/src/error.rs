@@ -38,6 +38,10 @@ pub enum Error {
     SaltHexFail = 33,
     SaltWrongSize = 34,
     SignatureHexFail = 35,
+    NotBridgePoolContractPackageHash = 36,
+    EcdsaPublicKeyRecoveryFail = 37,
+    MessageHashHexDecodingFail = 38,
+    PublicKeyTryIntoFail = 39,
 }
 
 impl From<Error> for ApiError {
