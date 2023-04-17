@@ -18,7 +18,8 @@ const GET_LIQUIDITY: &str = "get_liquidity";
 pub extern "C" fn call() {
     // Read the Counter smart contract's ContractHash.
     let contract_hash = {
-        let counter_uref = runtime::get_key(BRIDGE_POOL_KEY).unwrap_or_revert_with(ApiError::GetKey);
+        let counter_uref =
+            runtime::get_key(BRIDGE_POOL_KEY).unwrap_or_revert_with(ApiError::GetKey);
         if let Key::Hash(hash) = counter_uref {
             ContractHash::new(hash)
         } else {

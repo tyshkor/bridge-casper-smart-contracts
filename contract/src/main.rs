@@ -6,7 +6,6 @@ compile_error!("target arch should be wasm32: compile with '--target wasm32-unkn
 
 extern crate alloc;
 
-use crate::runtime_args::RuntimeArgs;
 use alloc::{
     string::{String, ToString},
     vec,
@@ -16,9 +15,11 @@ use casper_contract::{
     contract_api::{runtime, storage},
     unwrap_or_revert::UnwrapOrRevert,
 };
+use casper_types::Key;
+use casper_types::RuntimeArgs;
 use casper_types::{
     contracts::{EntryPoint, EntryPointAccess, EntryPointType, EntryPoints, NamedKeys},
-    runtime_args, CLType, CLTyped, CLValue, ContractPackageHash, Key, Parameter, U256,
+    runtime_args, CLType, CLTyped, CLValue, ContractPackageHash, Parameter, U256,
 };
 use contract_utils::{ContractContext, OnChainContractStorage};
 
@@ -29,6 +30,7 @@ const ENTRY_POINT_SWAP: &str = "swap";
 const ENTRY_POINT_ALLOW_TARGET: &str = "allow_target";
 const ENTRY_POINT_WITHDRAW_SIGNED: &str = "withdraw_signed";
 const ENTRY_POINT_ADD_SIGNER: &str = "add_signer";
+const ENTRY_POINT_WITHDRAW: &str = "withdraw";
 
 const CONTRACT_VERSION_KEY: &str = "version";
 const CONTRACT_KEY: &str = "bridge_pool";
@@ -57,7 +59,7 @@ pub extern "C" fn constructor() {
 
     runtime::put_key(
         "bridge_pool_contract_package_hash",
-        bridge_pool_contract_package_hash.into(),
+        bridge_pool_contract_package_hash,
     );
 
     Contract::default().constructor();
@@ -78,8 +80,11 @@ pub extern "C" fn get_liquidity() {
 pub extern "C" fn add_liquidity() {
     let amount = runtime::get_named_arg::<U256>("amount");
     let token_address = runtime::get_named_arg::<String>("token_address");
+    let bridge_pool_contract_package_hash =
+        runtime::get_named_arg::<String>("bridge_pool_contract_package_hash");
+    #[allow(clippy::let_unit_value)]
     let ret = Contract::default()
-        .add_liquidity(amount, token_address)
+        .add_liquidity(amount, token_address, bridge_pool_contract_package_hash)
         .unwrap_or_revert();
     runtime::ret(CLValue::from_t(ret).unwrap_or_revert());
 }
@@ -88,6 +93,7 @@ pub extern "C" fn add_liquidity() {
 pub extern "C" fn remove_liquidity() {
     let amount = runtime::get_named_arg::<U256>("amount");
     let token_address = runtime::get_named_arg::<String>("token_address");
+    #[allow(clippy::let_unit_value)]
     let ret = Contract::default()
         .remove_liquidity(amount, token_address)
         .unwrap_or_revert();
@@ -100,6 +106,7 @@ pub extern "C" fn swap() {
     let token_address = runtime::get_named_arg::<String>("token_address");
     let target_network = runtime::get_named_arg::<U256>("target_network");
     let target_token = runtime::get_named_arg::<String>("target_token");
+    #[allow(clippy::let_unit_value)]
     let ret = Contract::default()
         .swap(token_address, amount, target_network, target_token)
         .unwrap_or_revert();
@@ -112,6 +119,7 @@ pub extern "C" fn allow_target() {
     let token_name = runtime::get_named_arg::<String>("token_name");
     let target_network = runtime::get_named_arg::<U256>("target_network");
     let target_token = runtime::get_named_arg::<String>("target_token");
+    #[allow(clippy::let_unit_value)]
     let ret = Contract::default()
         .allow_target(token_address, token_name, target_network, target_token)
         .unwrap_or_revert();
@@ -125,8 +133,10 @@ pub extern "C" fn withdraw_signed() {
     let amount = runtime::get_named_arg::<U256>("amount");
     let salt = runtime::get_named_arg::<String>("salt");
     let signature = runtime::get_named_arg::<String>("signature");
+    let message_hash = runtime::get_named_arg::<String>("message_hash");
+    #[allow(clippy::let_unit_value)]
     let ret = Contract::default()
-        .withdraw_signed(token_address, payee, amount, salt, signature)
+        .withdraw_signed(token_address, payee, amount, salt, signature, message_hash)
         .unwrap_or_revert();
     runtime::ret(CLValue::from_t(ret).unwrap_or_revert());
 }
@@ -134,8 +144,19 @@ pub extern "C" fn withdraw_signed() {
 #[no_mangle]
 pub extern "C" fn add_signer() {
     let signer = runtime::get_named_arg::<String>("signer");
+    #[allow(clippy::let_unit_value)]
+    let ret = Contract::default().add_signer(signer);
+    runtime::ret(CLValue::from_t(ret).unwrap_or_revert());
+}
+
+#[no_mangle]
+pub extern "C" fn withdraw() {
+    let amount = runtime::get_named_arg::<U256>("amount");
+    let token_address = runtime::get_named_arg::<String>("token_address");
+    #[allow(clippy::let_unit_value)]
     let ret = Contract::default()
-        .add_signer(signer);
+        .withdraw(amount, token_address)
+        .unwrap_or_revert();
     runtime::ret(CLValue::from_t(ret).unwrap_or_revert());
 }
 
@@ -167,6 +188,7 @@ pub extern "C" fn call() {
         vec![
             Parameter::new("amount", U256::cl_type()),
             Parameter::new("token_address", String::cl_type()),
+            Parameter::new("bridge_pool_contract_package_hash", String::cl_type()),
         ],
         CLType::Unit,
         EntryPointAccess::Public,
@@ -226,8 +248,17 @@ pub extern "C" fn call() {
 
     bridge_pool_entry_points.add_entry_point(EntryPoint::new(
         ENTRY_POINT_ADD_SIGNER,
+        vec![Parameter::new("signer", String::cl_type())],
+        CLType::Unit,
+        EntryPointAccess::Public,
+        EntryPointType::Contract,
+    ));
+
+    bridge_pool_entry_points.add_entry_point(EntryPoint::new(
+        ENTRY_POINT_WITHDRAW,
         vec![
-            Parameter::new("signer", String::cl_type()),
+            Parameter::new("amount", U256::cl_type()),
+            Parameter::new("token_address", String::cl_type()),
         ],
         CLType::Unit,
         EntryPointAccess::Public,
@@ -242,8 +273,10 @@ pub extern "C" fn call() {
         Some("bridge_pool_access_uref".to_string()),
     );
 
+    runtime::put_key("bridge_pool_contract_hash", stored_contract_hash.into());
+
     let package_hash: ContractPackageHash = ContractPackageHash::new(
-        runtime::get_key("contract_package_hash")
+        runtime::get_key("bridge_pool_package_name")
             .unwrap_or_revert()
             .into_hash()
             .unwrap_or_revert(),
@@ -258,6 +291,8 @@ pub extern "C" fn call() {
             "bridge_pool_contract_package_hash" => package_hash_key,
         },
     );
+
+    runtime::put_key("bridge_pool_contract_package_hash", package_hash_key);
 
     /* To create a locked contract instead, use new_locked_contract and throw away the contract version returned
     let (stored_contract_hash, _) =

@@ -8,6 +8,10 @@ edition = "2021"
 casper-engine-test-support = { version = "2.2.0", features = ["test-support"] }
 casper-execution-engine = "2.0.0"
 casper-types = "1.5.0"
+base64 = { version = "0.13.0" }
+blake2 = { version = "0.9.0", default-features = false }
+test-env = { path = "../utils/test-env" }
+hex = "0.4.3"
 
 [[bin]]
 name = "integration-tests"
