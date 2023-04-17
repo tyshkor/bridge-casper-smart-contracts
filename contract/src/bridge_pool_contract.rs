@@ -1,4 +1,3 @@
-use crate::address::Address;
 use crate::detail;
 use crate::{
     data::{self, BrigdePool},
@@ -7,10 +6,8 @@ use crate::{
 };
 use alloc::string::String;
 use casper_contract::unwrap_or_revert::UnwrapOrRevert;
-use casper_types::account::AccountHash;
 use casper_types::{ContractPackageHash, U256};
 use contract_utils::{ContractContext, ContractStorage};
-use k256::ecdsa::Signature;
 
 pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage> {
     fn init(&mut self) {
@@ -29,18 +26,8 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
         data::emit(&event);
     }
 
+    // outer function to get liquidity already in pool
     fn get_liquidity(&mut self, token_address: String) -> Result<U256, Error> {
-        let token_contract_package_hash = ContractPackageHash::from_formatted_str(token_address.as_str())
-            .map_err(|_| Error::NotContractPackageHash)?;
-
-        let client_address =
-            detail::get_immediate_caller_address().unwrap_or_revert_with(Error::NegativeReward);
-
-        let bridge_pool_instance = BrigdePool::instance();
-        bridge_pool_instance.get_liquidity_added_by_client(token_contract_package_hash, client_address)
-    }
-
-    fn add_liquidity(&mut self, amount: U256, token_address: String) -> Result<(), Error> {
         let token_contract_package_hash =
             ContractPackageHash::from_formatted_str(token_address.as_str())
                 .map_err(|_| Error::NotContractPackageHash)?;
@@ -49,7 +36,35 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
             detail::get_immediate_caller_address().unwrap_or_revert_with(Error::NegativeReward);
 
         let bridge_pool_instance = BrigdePool::instance();
-        bridge_pool_instance.add_liquidity(token_contract_package_hash, client_address, amount)?;
+        bridge_pool_instance
+            .get_liquidity_added_by_client(token_contract_package_hash, client_address)
+    }
+
+    // outer function to add liquidity to the pool
+    fn add_liquidity(
+        &mut self,
+        amount: U256,
+        token_address: String,
+        bridge_pool_contract_package_hash: String,
+    ) -> Result<(), Error> {
+        let token_contract_package_hash =
+            ContractPackageHash::from_formatted_str(token_address.as_str())
+                .map_err(|_| Error::NotContractPackageHash)?;
+
+        let bridge_pool_contract_package_hash =
+            ContractPackageHash::from_formatted_str(bridge_pool_contract_package_hash.as_str())
+                .map_err(|_| Error::NotBridgePoolContractPackageHash)?;
+
+        let client_address =
+            detail::get_immediate_caller_address().unwrap_or_revert_with(Error::NegativeReward);
+
+        let bridge_pool_instance = BrigdePool::instance();
+        bridge_pool_instance.add_liquidity(
+            bridge_pool_contract_package_hash,
+            token_contract_package_hash,
+            client_address,
+            amount,
+        )?;
 
         self.emit(BridgePoolEvent::BridgeLiquidityAdded {
             actor: client_address,
@@ -59,6 +74,7 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
         Ok(())
     }
 
+    // outer function to remove liquidity from the pool
     fn remove_liquidity(&mut self, amount: U256, token_address: String) -> Result<(), Error> {
         let token_contract_package_hash =
             ContractPackageHash::from_formatted_str(token_address.as_str())
@@ -82,6 +98,7 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
         Ok(())
     }
 
+    // outer function to swap liquidity
     fn swap(
         &mut self,
         token_address: String,
@@ -109,6 +126,7 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
         Ok(())
     }
 
+    // outer function to allow target
     fn allow_target(
         &mut self,
         token_address: String,
@@ -120,10 +138,11 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
             .map_err(|_| Error::NotContractPackageHash)?;
 
         let bridge_pool_instance = BrigdePool::instance();
-        bridge_pool_instance.allow_target(token, token_name, target_token.clone(), target_network)?;
+        bridge_pool_instance.allow_target(token, token_name, target_token, target_network)?;
         Ok(())
     }
 
+    // outer function to withdraw liquidity from the pool securely
     fn withdraw_signed(
         &mut self,
         token_address: String,
@@ -131,6 +150,7 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
         amount: U256,
         salt: String,
         signature: String,
+        message_hash: String,
     ) -> Result<(), Error> {
         let actor =
             detail::get_immediate_caller_address().unwrap_or_revert_with(Error::NegativeReward);
@@ -138,11 +158,21 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
         let token = ContractPackageHash::from_formatted_str(token_address.as_str())
             .map_err(|_| Error::NotContractPackageHash)?;
 
-        let salt_array: [u8; 32] = hex::decode(salt).map_err(|_| Error::SaltHexFail)?.try_into().map_err(|_| Error::SaltWrongSize)?;
+        let salt_array: [u8; 32] = hex::decode(salt)
+            .map_err(|_| Error::SaltHexFail)?
+            .try_into()
+            .map_err(|_| Error::SaltWrongSize)?;
         let signature_vec = hex::decode(signature).unwrap();
 
         let bridge_pool_instance = BrigdePool::instance();
-        bridge_pool_instance.withdraw_signed(token, actor, amount, salt_array, signature_vec)?;
+        bridge_pool_instance.withdraw_signed(
+            token,
+            actor,
+            amount,
+            salt_array,
+            signature_vec,
+            message_hash,
+        )?;
         self.emit(BridgePoolEvent::TransferBySignature {
             signer: actor,
             reciever: payee,
@@ -152,8 +182,29 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
         Ok(())
     }
 
+    // outer function to add signer
     fn add_signer(&mut self, signer: String) {
         let bridge_pool_instance = BrigdePool::instance();
         bridge_pool_instance.add_signer(signer)
+    }
+
+    // outer function to withdraw liquidity from the pool
+    fn withdraw(&mut self, amount: U256, token_address: String) -> Result<(), Error> {
+        let token_contract_package_hash =
+            ContractPackageHash::from_formatted_str(token_address.as_str())
+                .map_err(|_| Error::NotContractPackageHash)?;
+
+        let client_address =
+            detail::get_immediate_caller_address().unwrap_or_revert_with(Error::NegativeReward);
+
+        let bridge_pool_instance = BrigdePool::instance();
+        bridge_pool_instance.withdraw(token_contract_package_hash, client_address, amount)?;
+
+        self.emit(BridgePoolEvent::BridgeLiquidityRemoved {
+            actor: client_address,
+            token: token_contract_package_hash,
+            amount,
+        });
+        Ok(())
     }
 }
