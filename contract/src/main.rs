@@ -56,7 +56,6 @@ impl Contract {
 pub extern "C" fn constructor() {
     let bridge_pool_contract_package_hash =
         runtime::get_named_arg::<Key>("bridge_pool_contract_package_hash");
-
     runtime::put_key(
         "bridge_pool_contract_package_hash",
         bridge_pool_contract_package_hash,

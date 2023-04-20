@@ -66,60 +66,61 @@ The following is an example of deploying the installation of the contract via th
 casper-client put-deploy \
     --chain-name casper-test \
     --node-address http://44.208.234.65:7777 \
-    --secret-key ./contract/keys/secret_key.pem \
+    --secret-key <path-to-key> \
     --session-path ./contract/target/wasm32-unknown-unknown/release/bridge_pool.wasm \
     --payment-amount 220000000000
 ```
 
-##### Example deploy
-step3 : add_liquidity
+##### Example add_liquidity
+```bash
 casper-client put-deploy \
     --chain-name casper-test \
     --node-address http://44.208.234.65:7777 \
-    --secret-key ./contract/keys/secret_key.pem \
+    --secret-key <path-to-key> \
     --session-hash hash-2eaf3bf2cbc8e46f56ce04904592aa530141170fbee3473baeba4edfe9e87513 \
     --session-entry-point add_liquidity \
     --payment-amount 5000000000 \
     --session-arg "amount:u256='20'" \
-    --session-arg "token_address:string='contract-package-wasme222974816f70ca96fc4002a696bb552e2959d3463158cd82a7bfc8a94c03473'" \
-    --session-arg "bridge_pool_contract_package_hash:string='contract-package-wasm85802b5c7c8a1ebf93fa3d20ed1837e1887c629cc8dc005eb49c64e911cd4abf'"
+    --session-arg "token_address:string='contract-package-wasm<token_address>'" \
+    --session-arg "bridge_pool_contract_package_hash:string='contract-package-wasm<bridge_pool_contract_package_hash>'"
+```
 
-contract-package-wasmfb784965ea45fbfd24029d2bcab1dc2233e21e3f5975d04ef66db9710ff706d8
-
-##### Example deploy
-step3.5 : get_liquidity
+##### Example get_liquidity
+```bash
 casper-client put-deploy \
     --chain-name casper-test \
     --node-address http://44.208.234.65:7777 \
-    --secret-key ./contract/keys/secret_key.pem \
+    --secret-key <path-to-key> \
     --session-hash hash-2eaf3bf2cbc8e46f56ce04904592aa530141170fbee3473baeba4edfe9e87513 \
     --session-entry-point get_liquidity \
     --payment-amount 5000000000 \
-    --session-arg "token_address:string='contract-package-wasme222974816f70ca96fc4002a696bb552e2959d3463158cd82a7bfc8a94c03473'"
+    --session-arg "token_address:string='contract-package-wasm<token_address>'"
+```
 
-##### Example deploy
-step4 : remove_liquidity
+##### Example remove_liquidity
+```bash
 casper-client put-deploy \
     --chain-name casper-test \
     --node-address http://44.208.234.65:7777 \
-    --secret-key ./contract/keys/secret_key.pem \
+    --secret-key <path-to-key> \
     --session-hash hash-2eaf3bf2cbc8e46f56ce04904592aa530141170fbee3473baeba4edfe9e87513 \
     --session-entry-point remove_liquidity \
     --payment-amount 5000000000 \
     --session-arg "amount:u256='1'" \
-    --session-arg "token_address:string='contract-package-wasme222974816f70ca96fc4002a696bb552e2959d3463158cd82a7bfc8a94c03473'"
+    --session-arg "token_address:string='contract-package-wasm<token_address>'"
+```
 
 ##### Example allow_target
 ```bash
 casper-client put-deploy \
     --chain-name casper-test \
     --node-address http://44.208.234.65:7777 \
-    --secret-key ./contract/keys/secret_key.pem \
+    --secret-key <path-to-key> \
     --session-hash hash-2eaf3bf2cbc8e46f56ce04904592aa530141170fbee3473baeba4edfe9e87513 \
     --session-entry-point allow_target \
     --payment-amount 5000000000 \
-    --session-arg "token_address:string='contract-package-wasme222974816f70ca96fc4002a696bb552e2959d3463158cd82a7bfc8a94c03473'" \
-    --session-arg "token_name:string='some_unusual_token_name'" \
+    --session-arg "token_address:string='contract-package-wasm<token_address>'" \
+    --session-arg "token_name:string='<token_name>'" \
     --session-arg "target_network:u256='1'" \
     --session-arg "target_token:string='qwe'"
 ```
@@ -129,14 +130,14 @@ casper-client put-deploy \
 casper-client put-deploy \
     --chain-name casper-test \
     --node-address http://44.208.234.65:7777 \
-    --secret-key ./contract/keys/secret_key.pem \
+    --secret-key <path-to-key> \
     --session-hash hash-2eaf3bf2cbc8e46f56ce04904592aa530141170fbee3473baeba4edfe9e87513 \
     --session-entry-point swap \
     --payment-amount 5000000000 \
     --session-arg "amount:u256='1'" \
     --session-arg "target_network:u256='1'" \
-    --session-arg "target_token:string='qwe'" \
-    --session-arg "token_address:string='contract-package-wasme222974816f70ca96fc4002a696bb552e2959d3463158cd82a7bfc8a94c03473'"
+    --session-arg "target_token:string='<target_token>'" \
+    --session-arg "token_address:string='contract-package-wasm<token_address>'"
 ```
 
 ##### Example add_signer
@@ -144,11 +145,11 @@ casper-client put-deploy \
 casper-client put-deploy \
     --chain-name casper-test \
     --node-address http://44.208.234.65:7777 \
-    --secret-key ./contract/keys/secret_key.pem \
+    --secret-key <path-to-key> \
     --session-hash hash-2eaf3bf2cbc8e46f56ce04904592aa530141170fbee3473baeba4edfe9e87513 \
     --session-entry-point add_signer \
     --payment-amount 5000000000 \
-    --session-arg "signer:string='cde782dee9643b02dde8a11499ede81ec1d05dd3'"
+    --session-arg "signer:string='<signer>'"
 ```
 
 ##### Example withdraw_signed
@@ -156,16 +157,16 @@ casper-client put-deploy \
 casper-client put-deploy \
     --chain-name casper-test \
     --node-address http://44.208.234.65:7777 \
-    --secret-key /home/ubuntu/release_bridge_pool/bridge-casper-smart-contracts/contract/keys/secret_key.pem \
+    --secret-key <path-to-key> \
     --session-hash hash-2eaf3bf2cbc8e46f56ce04904592aa530141170fbee3473baeba4edfe9e87513 \
     --session-entry-point withdraw_signed \
     --payment-amount 505000000000 \
-    --session-arg "token_address:string='contract-package-wasme222974816f70ca96fc4002a696bb552e2959d3463158cd82a7bfc8a94c03473'" \
-    --session-arg "payee:string='0Bdb79846e8331A19A65430363f240Ec8aCC2A52'" \
+    --session-arg "token_address:string='contract-package-wasm<token_address>'" \
+    --session-arg "payee:string='<payee>'" \
     --session-arg "amount:u256='1'" \
-    --session-arg "signature:string='b086ec5298630507dc314767a3cdb0d5e38381b11a35096e4f7c8706b51742c100fd299da6b56b33af70482a5656663a3a57d2c52e5442f56d3e948395918f8e1c'" \
-    --session-arg "salt:string='6b166cc8016d4ddb7a2578245ac9de73bd95f30ea960ab53dec02141623832dd'" \
-    --session-arg "message_hash:string='a02c88bd2abba0d58c72141d00098448a3da586a2f38a3679525a1cbd0fd60d5'"
+    --session-arg "signature:string='<signature>'" \
+    --session-arg "salt:string='<salt>'" \
+    --session-arg "message_hash:string='<message_hash>'"
 ```
 
 ##### Example Withdraw
@@ -173,12 +174,12 @@ casper-client put-deploy \
 casper-client put-deploy \
     --chain-name casper-test \
     --node-address http://44.208.234.65:7777 \
-    --secret-key ./contract/keys/secret_key.pem \
+    --secret-key <path-to-key> \
     --session-hash hash-2eaf3bf2cbc8e46f56ce04904592aa530141170fbee3473baeba4edfe9e87513 \
     --session-entry-point withdraw \
     --payment-amount 5000000000 \
     --session-arg "amount:u256='1'" \
-    --session-arg "token_address:string='contract-package-wasme222974816f70ca96fc4002a696bb552e2959d3463158cd82a7bfc8a94c03473'"
+    --session-arg "token_address:string='contract-package-wasme<token_address>'"
 ```
 
 ## Events
