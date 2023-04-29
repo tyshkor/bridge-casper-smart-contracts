@@ -1,6 +1,6 @@
 use crate::detail;
 use crate::{
-    data::{self, BrigdePool},
+    data::{self, BridgePool},
     error::Error,
     event::BridgePoolEvent,
 };
@@ -11,7 +11,7 @@ use contract_utils::{ContractContext, ContractStorage};
 
 pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage> {
     fn init(&mut self) {
-        BrigdePool::init();
+        BridgePool::init();
     }
 
     fn name(&self) -> String {
@@ -35,7 +35,7 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
         let client_address =
             detail::get_immediate_caller_address().unwrap_or_revert_with(Error::NegativeReward);
 
-        let bridge_pool_instance = BrigdePool::instance();
+        let bridge_pool_instance = BridgePool::instance();
         bridge_pool_instance
             .get_liquidity_added_by_client(token_contract_package_hash, client_address)
     }
@@ -58,7 +58,7 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
         let client_address =
             detail::get_immediate_caller_address().unwrap_or_revert_with(Error::NegativeReward);
 
-        let bridge_pool_instance = BrigdePool::instance();
+        let bridge_pool_instance = BridgePool::instance();
         bridge_pool_instance.add_liquidity(
             bridge_pool_contract_package_hash,
             token_contract_package_hash,
@@ -83,7 +83,7 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
         let client_address =
             detail::get_immediate_caller_address().unwrap_or_revert_with(Error::NegativeReward);
 
-        let bridge_pool_instance = BrigdePool::instance();
+        let bridge_pool_instance = BridgePool::instance();
         bridge_pool_instance.remove_liquidity(
             token_contract_package_hash,
             client_address,
@@ -112,7 +112,7 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
         let token = ContractPackageHash::from_formatted_str(token_address.as_str())
             .map_err(|_| Error::NotContractPackageHash)?;
 
-        let bridge_pool_instance = BrigdePool::instance();
+        let bridge_pool_instance = BridgePool::instance();
         bridge_pool_instance.swap(actor, token, target_token.clone(), amount, target_network)?;
 
         self.emit(BridgePoolEvent::BridgeSwap {
@@ -137,7 +137,7 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
         let token = ContractPackageHash::from_formatted_str(token_address.as_str())
             .map_err(|_| Error::NotContractPackageHash)?;
 
-        let bridge_pool_instance = BrigdePool::instance();
+        let bridge_pool_instance = BridgePool::instance();
         bridge_pool_instance.allow_target(token, token_name, target_token, target_network)?;
         Ok(())
     }
@@ -164,7 +164,7 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
             .map_err(|_| Error::SaltWrongSize)?;
         let signature_vec = hex::decode(signature).unwrap();
 
-        let bridge_pool_instance = BrigdePool::instance();
+        let bridge_pool_instance = BridgePool::instance();
         bridge_pool_instance.withdraw_signed(
             token,
             actor,
@@ -184,7 +184,7 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
 
     // outer function to add signer
     fn add_signer(&mut self, signer: String) {
-        let bridge_pool_instance = BrigdePool::instance();
+        let bridge_pool_instance = BridgePool::instance();
         bridge_pool_instance.add_signer(signer)
     }
 
@@ -197,7 +197,7 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
         let client_address =
             detail::get_immediate_caller_address().unwrap_or_revert_with(Error::NegativeReward);
 
-        let bridge_pool_instance = BrigdePool::instance();
+        let bridge_pool_instance = BridgePool::instance();
         bridge_pool_instance.withdraw(token_contract_package_hash, client_address, amount)?;
 
         self.emit(BridgePoolEvent::BridgeLiquidityRemoved {

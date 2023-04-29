@@ -34,7 +34,7 @@ const CONTRACT_PACKAGE_HASH: &str = "contract_package_hash";
 const NAME: &str = "name";
 const ADDRESS: &str = "address";
 
-pub struct BrigdePool {
+pub struct BridgePool {
     // dictionary to track client conected dictionaries
     account_hash_liquidities_dict: Dict,
     // dictionary to track external contracts' conected dictionaries
@@ -49,9 +49,9 @@ pub struct BrigdePool {
     token_contract_package_hash_dict_name: Dict,
 }
 
-impl BrigdePool {
-    pub fn instance() -> BrigdePool {
-        BrigdePool {
+impl BridgePool {
+    pub fn instance() -> BridgePool {
+        BridgePool {
             account_hash_liquidities_dict: Dict::instance(ACCOUNT_HASH_LIQUIDITIES_DICT),
             hash_addr_liquidities_dict: Dict::instance(HASH_ADDR_LIQUIDITIES_DICT),
             allowed_targets_dict: Dict::instance(ALLOWED_TARGETS_DICT),
