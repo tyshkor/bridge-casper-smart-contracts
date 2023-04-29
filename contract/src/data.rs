@@ -79,15 +79,10 @@ impl BridgePool {
         client_address: Address,
     ) -> Result<U256, Error> {
         let client_string: String = TryInto::try_into(client_address)?;
-        let dict = match client_address {
-            Address::Account(_) => &self.account_hash_liquidities_dict,
-            Address::ContractPackage(_) => &self.hash_addr_liquidities_dict,
-            Address::ContractHash(_) => return Err(Error::UnexpectedContractHash),
-        };
         Ok(self.get_liquidity_added_by_client_generic(
             token_contract_hash.to_string(),
             client_string,
-            dict,
+            self.get_dict(client_address)?,
         ))
     }
 
@@ -123,16 +118,11 @@ impl BridgePool {
         );
 
         let client_string: String = TryInto::try_into(client_address)?;
-        let dict = match client_address {
-            Address::Account(_) => &self.account_hash_liquidities_dict,
-            Address::ContractPackage(_) => &self.hash_addr_liquidities_dict,
-            Address::ContractHash(_) => return Err(Error::UnexpectedContractHash),
-        };
         self.add_liquidity_generic(
             token_contract_package_hash.to_string(),
             client_string,
             amount,
-            dict,
+            self.get_dict(client_address)?,
         );
 
         Ok(())
@@ -171,16 +161,11 @@ impl BridgePool {
     ) -> Result<(), Error> {
         let client_string: String = TryInto::try_into(client_address)?;
         self.pay_from_me(token_contract_package_hash, client_address, amount);
-        let dict = match client_address {
-            Address::Account(_) => &self.account_hash_liquidities_dict,
-            Address::ContractPackage(_) => &self.hash_addr_liquidities_dict,
-            Address::ContractHash(_) => return Err(Error::UnexpectedContractHash),
-        };
         self.remove_liquidity_generic(
             token_contract_package_hash.to_string(),
             client_string,
             amount,
-            dict,
+            self.get_dict(client_address)?,
         )?;
         Ok(())
     }
@@ -219,16 +204,11 @@ impl BridgePool {
     ) -> Result<(), Error> {
         let client_string: String = TryInto::try_into(client_address)?;
         self.pay_from_me(token_contract_package_hash, client_address, amount);
-        let dict = match client_address {
-            Address::Account(_) => &self.account_hash_liquidities_dict,
-            Address::ContractPackage(_) => &self.hash_addr_liquidities_dict,
-            Address::ContractHash(_) => return Err(Error::UnexpectedContractHash),
-        };
         self.remove_liquidity_generic(
             token_contract_package_hash.to_string(),
             client_string,
             amount,
-            dict,
+            self.get_dict(client_address)?,
         )?;
         Ok(())
     }
@@ -475,6 +455,14 @@ impl BridgePool {
             "amount" => amount
         };
         runtime::call_versioned_contract::<()>(token, None, "transfer", args);
+    }
+
+    fn get_dict(&self, client_address: Address) -> Result<&Dict, Error> {
+        match client_address {
+            Address::Account(_) => Ok(&self.account_hash_liquidities_dict),
+            Address::ContractPackage(_) => Ok(&self.hash_addr_liquidities_dict),
+            Address::ContractHash(_) => return Err(Error::UnexpectedContractHash),
+        }
     }
 }
 
