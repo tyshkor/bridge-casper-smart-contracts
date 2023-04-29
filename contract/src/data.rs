@@ -28,6 +28,7 @@ const ALLOWED_TARGETS_DICT: &str = "allowed_targets_dict";
 const USED_HASHES_DICT: &str = "used_hashes_dict";
 const SIGNERS_DICT: &str = "signers_dict";
 const TOKEN_CONTRACT_PACKAGE_HASH_DICT_NAME: &str = "token_contract_package_hash_dict_name";
+const BRIDGE_POOL_CONTRACT_PACKAGE_HASH: &str = "bridge_pool_contract_package_hash";
 
 const CONTRACT_PACKAGE_HASH: &str = "contract_package_hash";
 
@@ -425,7 +426,7 @@ impl BridgePool {
     // pay from any address to this contract. Remember to approve the tokens beforehand
     fn pay_me(&self, token: ContractPackageHash, spender: Address, amount: U256) {
         let bridge_pool_contract_package_hash =
-            runtime::get_key("bridge_pool_contract_package_hash")
+            runtime::get_key(BRIDGE_POOL_CONTRACT_PACKAGE_HASH)
                 .unwrap_or_revert_with(Error::MissingContractPackageHash)
                 .into_hash()
                 .map(ContractPackageHash::new)

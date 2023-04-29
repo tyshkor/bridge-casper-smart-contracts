@@ -34,6 +34,7 @@ const ENTRY_POINT_REMOVE_SIGNER: &str = "remove_signer";
 
 const CONTRACT_VERSION_KEY: &str = "version";
 const CONTRACT_KEY: &str = "bridge_pool";
+const BRIDGE_POOL_CONTRACT_PACKAGE_HASH: &str = "bridge_pool_contract_package_hash";
 
 #[derive(Default)]
 struct Contract(OnChainContractStorage);
@@ -55,9 +56,9 @@ impl Contract {
 #[no_mangle]
 pub extern "C" fn constructor() {
     let bridge_pool_contract_package_hash =
-        runtime::get_named_arg::<Key>("bridge_pool_contract_package_hash");
+        runtime::get_named_arg::<Key>(BRIDGE_POOL_CONTRACT_PACKAGE_HASH);
     runtime::put_key(
-        "bridge_pool_contract_package_hash",
+        BRIDGE_POOL_CONTRACT_PACKAGE_HASH,
         bridge_pool_contract_package_hash,
     );
 
@@ -80,7 +81,7 @@ pub extern "C" fn add_liquidity() {
     let amount = runtime::get_named_arg::<U256>("amount");
     let token_address = runtime::get_named_arg::<String>("token_address");
     let bridge_pool_contract_package_hash =
-        runtime::get_named_arg::<String>("bridge_pool_contract_package_hash");
+        runtime::get_named_arg::<String>(BRIDGE_POOL_CONTRACT_PACKAGE_HASH);
     #[allow(clippy::let_unit_value)]
     let ret = Contract::default()
         .add_liquidity(amount, token_address, bridge_pool_contract_package_hash)
