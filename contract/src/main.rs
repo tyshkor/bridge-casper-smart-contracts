@@ -188,7 +188,7 @@ pub extern "C" fn call() {
         ENTRY_POINT_CONSTRUCTOR,
         vec![],
         <()>::cl_type(),
-        EntryPointAccess::Groups(vec![admin_group.clone()]),
+        EntryPointAccess::Groups(vec![Group::new(CONSTRUCTOR_GROUP)]),
         EntryPointType::Contract,
     ));
 
@@ -304,12 +304,6 @@ pub extern "C" fn call() {
             .pop()
             .unwrap_or_revert();
 
-    let mut admin_urefs = BTreeSet::new();
-    admin_urefs.insert(constructor_access);
-
-    storage::create_contract_user_group(package_hash, ADMIN_GROUP, 1, admin_urefs)
-        .unwrap_or_revert();
-
     let _: () = runtime::call_contract(
         stored_contract_hash,
         ENTRY_POINT_CONSTRUCTOR,
@@ -321,6 +315,15 @@ pub extern "C" fn call() {
     let mut urefs = BTreeSet::new();
     urefs.insert(constructor_access);
     storage::remove_contract_user_group_urefs(package_hash, CONSTRUCTOR_GROUP, urefs)
+        .unwrap_or_revert();
+
+    let mut admin_urefs = BTreeSet::new();
+    admin_urefs.insert(constructor_access);
+
+    // storage::create_contract_user_group(package_hash, ADMIN_GROUP, 1, admin_urefs)
+    //     .unwrap_or_revert();
+
+    storage::create_contract_user_group(package_hash, ADMIN_GROUP, 1, Default::default())
         .unwrap_or_revert();
 
     runtime::put_key(BRIDGE_POOL_CONTRACT_PACKAGE_HASH, package_hash_key);
