@@ -84,14 +84,14 @@ impl BrigdePool {
             Address::ContractPackage(_) => &self.hash_addr_liquidities_dict,
             Address::ContractHash(_) => return Err(Error::UnexpectedContractHash),
         };
-        Ok(self.get_liquidity_added_by_client_genric(
+        Ok(self.get_liquidity_added_by_client_generic(
             token_contract_hash.to_string(),
             client_string,
             dict,
         ))
     }
 
-    pub fn get_liquidity_added_by_client_genric(
+    pub fn get_liquidity_added_by_client_generic(
         &self,
         token_contract_hash: String,
         client: String,
