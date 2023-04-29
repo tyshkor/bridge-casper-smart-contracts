@@ -477,7 +477,10 @@ pub fn emit(event: &BridgePoolEvent) {
             let mut param = BTreeMap::new();
             param.insert(CONTRACT_PACKAGE_HASH, package.to_string());
             param.insert("event_type", "bridge_liquidity_added".to_string());
-            insert_actor(actor, &mut param);
+            param.insert(
+                "actor",
+                (*actor).try_into().unwrap(),
+            );
             param.insert("token", token.to_string());
             param.insert("amount", amount.to_string());
             events.push(param);
@@ -490,7 +493,10 @@ pub fn emit(event: &BridgePoolEvent) {
             let mut param = BTreeMap::new();
             param.insert(CONTRACT_PACKAGE_HASH, package.to_string());
             param.insert("event_type", "bridge_liquidity_removed".to_string());
-            insert_actor(actor, &mut param);
+            param.insert(
+                "actor",
+                (*actor).try_into().unwrap(),
+            );
             param.insert("token", token.to_string());
             param.insert("amount", amount.to_string());
             events.push(param);
@@ -506,7 +512,10 @@ pub fn emit(event: &BridgePoolEvent) {
             let mut param = BTreeMap::new();
             param.insert(CONTRACT_PACKAGE_HASH, package.to_string());
             param.insert("event_type", "bridge_swap".to_string());
-            insert_actor(actor, &mut param);
+            param.insert(
+                "actor",
+                (*actor).try_into().unwrap(),
+            );
             param.insert("token", token.to_string());
             param.insert("target_network", target_network.to_string());
             param.insert("target_token", target_token.to_string());
@@ -545,16 +554,5 @@ pub fn emit(event: &BridgePoolEvent) {
     };
     for param in events {
         let _: URef = storage::new_uref(param);
-    }
-}
-
-fn insert_actor(actor: &Address, param: &mut BTreeMap<&str, String>) {
-    if actor.as_account_hash().is_some() {
-        param.insert("actor", actor.as_account_hash().unwrap().to_string());
-    } else {
-        param.insert(
-            "actor",
-            actor.as_contract_package_hash().unwrap().to_string(),
-        );
     }
 }
