@@ -16,7 +16,7 @@ use casper_contract::{
 };
 use casper_types::RuntimeArgs;
 use casper_types::{runtime_args, system::CallStackElement, ContractPackageHash, URef, U256};
-use contract_utils::{get_key, set_key, Dict};
+use contract_utils::Dict;
 
 use k256::ecdsa::{
     recoverable::Signature as RecoverableSignature, signature::Signature as NonRecoverableSignature,
@@ -30,9 +30,6 @@ const SIGNERS_DICT: &str = "signers_dict";
 const TOKEN_CONTRACT_PACKAGE_HASH_DICT_NAME: &str = "token_contract_package_hash_dict_name";
 
 const CONTRACT_PACKAGE_HASH: &str = "contract_package_hash";
-
-const NAME: &str = "name";
-const ADDRESS: &str = "address";
 
 pub struct BridgePool {
     // dictionary to track client conected dictionaries
@@ -453,22 +450,6 @@ impl BridgePool {
     }
 }
 
-pub fn name() -> String {
-    get_key(NAME).unwrap_or_revert()
-}
-
-pub fn set_name(name: String) {
-    set_key(NAME, name);
-}
-
-pub fn address() -> String {
-    get_key(ADDRESS).unwrap_or_revert()
-}
-
-pub fn set_address(address: String) {
-    set_key(ADDRESS, address);
-}
-
 // function to return contract package hash in case it's possible
 pub fn contract_package_hash() -> ContractPackageHash {
     let call_stacks = get_call_stack();
@@ -567,7 +548,7 @@ pub fn emit(event: &BridgePoolEvent) {
     }
 }
 
-fn insert_actor(actor: &Address, mut param: &mut BTreeMap<&str, String>) {
+fn insert_actor(actor: &Address, param: &mut BTreeMap<&str, String>) {
     if actor.as_account_hash().is_some() {
         param.insert("actor", actor.as_account_hash().unwrap().to_string());
     } else {

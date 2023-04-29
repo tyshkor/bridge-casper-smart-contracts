@@ -14,14 +14,6 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
         BridgePool::init();
     }
 
-    fn name(&self) -> String {
-        data::name()
-    }
-
-    fn address(&self) -> String {
-        data::address()
-    }
-
     fn emit(&mut self, event: BridgePoolEvent) {
         data::emit(&event);
     }
