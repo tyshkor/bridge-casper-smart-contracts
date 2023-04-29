@@ -197,7 +197,7 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
 
 fn is_lowercase(s: &str) -> bool {
     for c in s.chars() {
-        if !c.is_ascii_lowercase() {
+        if !(c.is_lowercase() || c.is_ascii_digit()) {
             return false;
         }
     }
