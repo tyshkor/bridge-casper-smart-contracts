@@ -676,7 +676,10 @@ mod tests {
         )
         .build();
 
-        builder.exec(remove_signer_request).expect_success().commit();
+        builder
+            .exec(remove_signer_request)
+            .expect_success()
+            .commit();
     }
 
     #[test]
