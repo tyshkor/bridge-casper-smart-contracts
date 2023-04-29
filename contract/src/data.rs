@@ -258,16 +258,11 @@ impl BridgePool {
             return Err(Error::InvalidSigner);
         }
         self.pay_from_me(token_contract_package_hash, payee, amount);
-        let dict = match payee {
-            Address::Account(_) => &self.account_hash_liquidities_dict,
-            Address::ContractPackage(_) => &self.hash_addr_liquidities_dict,
-            Address::ContractHash(_) => return Err(Error::UnexpectedContractHash),
-        };
         self.remove_liquidity_generic(
             token_contract_package_hash.to_string(),
             payee_string,
             amount,
-            dict,
+            self.get_dict(payee)?,
         )?;
         Ok(())
     }
@@ -319,14 +314,13 @@ impl BridgePool {
                 .map_err(|_| Error::EcdsaPublicKeyRecoveryFail)?;
 
         if self
-            .hash_addr_liquidities_dict
+            .used_hashes_dict
             .get::<bool>(message_hash.as_str())
             .is_some()
         {
             return Err(Error::MessageAlreadyUsed);
         } else {
-            self.hash_addr_liquidities_dict
-                .set(message_hash.as_str(), true);
+            self.used_hashes_dict.set(message_hash.as_str(), true);
         }
         Ok(public_key)
     }
