@@ -7,7 +7,6 @@ This contract has the following functionality:
 
 - add liquidity to the pool
 - remove liquidity from the pool
-- withdraw liquidity from the pool
 - withraw signed liquidity from the pool securely
 - swap with another network
 - get liquidity already in the pool
@@ -181,18 +180,6 @@ casper-client put-deploy \
     --session-arg "message_hash:string='<message_hash>'"
 ```
 
-##### Example Withdraw
-```bash
-casper-client put-deploy \
-    --chain-name casper-test \
-    --node-address http://44.208.234.65:7777 \
-    --secret-key <path-to-key> \
-    --session-hash hash-2eaf3bf2cbc8e46f56ce04904592aa530141170fbee3473baeba4edfe9e87513 \
-    --session-entry-point withdraw \
-    --payment-amount 5000000000 \
-    --session-arg "amount:u256='1'" \
-    --session-arg "token_address:string='contract-package-wasme<token_address>'"
-```
 
 ## Events
 

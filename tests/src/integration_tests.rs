@@ -558,6 +558,128 @@ mod tests {
     }
 
     #[test]
+    fn should_be_able_to_install_add_and_remove_signer() {
+        let mut builder = InMemoryWasmTestBuilder::default();
+        builder.run_genesis(&DEFAULT_RUN_GENESIS_REQUEST).commit();
+
+        let erc20_runtime_args = runtime_args! {
+            "name" => "FERRUM_ERC20".to_string(),
+            "symbol" => "F_ERC20".to_string(),
+            "total_supply" => U256::from(500000i64),
+            "decimals" => 8u8,
+        };
+
+        let erc_20_install_request =
+            ExecuteRequestBuilder::standard(*DEFAULT_ACCOUNT_ADDR, ERC20_WASM, erc20_runtime_args)
+                .build();
+
+        builder
+            .exec(erc_20_install_request)
+            .expect_success()
+            .commit();
+
+        let erc20_contract_hash = get_erc20_contract_hash(&builder);
+
+        println!(
+            "erc20_contract_hash {:?}",
+            erc20_contract_hash.to_formatted_string()
+        );
+        let mint_request = ExecuteRequestBuilder::contract_call_by_hash(
+            *DEFAULT_ACCOUNT_ADDR,
+            erc20_contract_hash,
+            "mint",
+            runtime_args! {},
+        )
+        .build();
+
+        builder.exec(mint_request).expect_success().commit();
+
+        let erc20_contract_key: Key = erc20_contract_hash.into();
+
+        let balance = balance_dictionary(
+            &builder,
+            erc20_contract_key,
+            Key::Account(*DEFAULT_ACCOUNT_ADDR),
+        );
+        assert_eq!(balance, U256::from(510000u64));
+
+        let contract_installation_request = ExecuteRequestBuilder::standard(
+            *DEFAULT_ACCOUNT_ADDR,
+            BRIDGE_POOL_WASM,
+            runtime_args! {},
+        )
+        .build();
+
+        builder
+            .exec(contract_installation_request)
+            .expect_success()
+            .commit();
+
+        let bridge_pool_contract_package_hash = get_bridge_pool_contract_package_hash(&builder);
+
+        let bridge_pool_contract_hash = get_bridge_pool_contract_hash(&builder);
+
+        let bridge_pool_contract_key: Key = bridge_pool_contract_package_hash.into();
+
+        let approve_args = runtime_args! {
+            "spender" => bridge_pool_contract_key,
+            "amount" => U256::from(10i64),
+        };
+
+        let approve_request = ExecuteRequestBuilder::contract_call_by_hash(
+            *DEFAULT_ACCOUNT_ADDR,
+            erc20_contract_hash,
+            "approve",
+            approve_args,
+        )
+        .build();
+
+        builder.exec(approve_request).expect_success().commit();
+
+        let actual_allowance = allowance_dictionary(
+            &builder,
+            erc20_contract_key,
+            Key::Account(*DEFAULT_ACCOUNT_ADDR),
+            bridge_pool_contract_key,
+        );
+
+        assert_eq!(actual_allowance, U256::from(10i64));
+
+        let erc20_contract_package_hash = get_erc20_contract_package_hash(&builder);
+
+        let erc20_contract_package_hash_string = erc20_contract_package_hash.to_formatted_string();
+        let bridge_pool_contract_package_hash_string =
+            bridge_pool_contract_package_hash.to_formatted_string();
+        let add_signer_args = runtime_args! {
+            "signer" => "cde782dee9643b02dde8a11499ede81ec1d05dd3".to_string() ,
+        };
+
+        let add_signer_request = ExecuteRequestBuilder::contract_call_by_hash(
+            *DEFAULT_ACCOUNT_ADDR,
+            bridge_pool_contract_hash,
+            "add_signer",
+            add_signer_args,
+        )
+        .build();
+
+        builder.exec(add_signer_request).expect_success().commit();
+
+        let remove_signer_args = runtime_args! {
+            "signer" => "cde782dee9643b02dde8a11499ede81ec1d05dd3".to_string() ,
+        };
+
+        let remove_signer_request = ExecuteRequestBuilder::contract_call_by_hash(
+            *DEFAULT_ACCOUNT_ADDR,
+            bridge_pool_contract_hash,
+            "remove_signer",
+            remove_signer_args,
+        )
+        .build();
+
+        builder.exec(remove_signer_request).expect_success().commit();
+    }
+
+    #[test]
     fn should_be_able_to_install_and_add_liquidity_and_withdraw_signed() {
         let mut builder = InMemoryWasmTestBuilder::default();
         builder.run_genesis(&DEFAULT_RUN_GENESIS_REQUEST).commit();

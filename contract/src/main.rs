@@ -31,7 +31,6 @@ const ENTRY_POINT_ALLOW_TARGET: &str = "allow_target";
 const ENTRY_POINT_WITHDRAW_SIGNED: &str = "withdraw_signed";
 const ENTRY_POINT_ADD_SIGNER: &str = "add_signer";
 const ENTRY_POINT_REMOVE_SIGNER: &str = "remove_signer";
-const ENTRY_POINT_WITHDRAW: &str = "withdraw";
 
 const CONTRACT_VERSION_KEY: &str = "version";
 const CONTRACT_KEY: &str = "bridge_pool";
@@ -254,17 +253,6 @@ pub extern "C" fn call() {
     bridge_pool_entry_points.add_entry_point(EntryPoint::new(
         ENTRY_POINT_REMOVE_SIGNER,
         vec![Parameter::new("signer", String::cl_type())],
-        CLType::Unit,
-        EntryPointAccess::Public,
-        EntryPointType::Contract,
-    ));
-
-    bridge_pool_entry_points.add_entry_point(EntryPoint::new(
-        ENTRY_POINT_WITHDRAW,
-        vec![
-            Parameter::new("amount", U256::cl_type()),
-            Parameter::new("token_address", String::cl_type()),
-        ],
         CLType::Unit,
         EntryPointAccess::Public,
         EntryPointType::Contract,
