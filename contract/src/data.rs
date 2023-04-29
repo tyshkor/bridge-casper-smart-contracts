@@ -215,6 +215,11 @@ impl BridgePool {
         self.signers_dict.set(&signer, true)
     }
 
+    // function to remvoe signer
+    pub fn remove_signer(&self, signer: String) {
+        self.signers_dict.remove::<bool>(&signer)
+    }
+
     // withdraw liquidity from pool securely
     pub fn withdraw_signed(
         &self,

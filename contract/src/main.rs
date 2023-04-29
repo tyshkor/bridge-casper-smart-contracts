@@ -30,6 +30,7 @@ const ENTRY_POINT_SWAP: &str = "swap";
 const ENTRY_POINT_ALLOW_TARGET: &str = "allow_target";
 const ENTRY_POINT_WITHDRAW_SIGNED: &str = "withdraw_signed";
 const ENTRY_POINT_ADD_SIGNER: &str = "add_signer";
+const ENTRY_POINT_REMOVE_SIGNER: &str = "remove_signer";
 const ENTRY_POINT_WITHDRAW: &str = "withdraw";
 
 const CONTRACT_VERSION_KEY: &str = "version";
@@ -149,6 +150,14 @@ pub extern "C" fn add_signer() {
 }
 
 #[no_mangle]
+pub extern "C" fn remove_signer() {
+    let signer = runtime::get_named_arg::<String>("signer");
+    #[allow(clippy::let_unit_value)]
+    let ret = Contract::default().remove_signer(signer);
+    runtime::ret(CLValue::from_t(ret).unwrap_or_revert());
+}
+
+#[no_mangle]
 pub extern "C" fn call() {
     let bridge_pool_named_keys = NamedKeys::new();
 
@@ -236,6 +245,14 @@ pub extern "C" fn call() {
 
     bridge_pool_entry_points.add_entry_point(EntryPoint::new(
         ENTRY_POINT_ADD_SIGNER,
+        vec![Parameter::new("signer", String::cl_type())],
+        CLType::Unit,
+        EntryPointAccess::Public,
+        EntryPointType::Contract,
+    ));
+
+    bridge_pool_entry_points.add_entry_point(EntryPoint::new(
+        ENTRY_POINT_REMOVE_SIGNER,
         vec![Parameter::new("signer", String::cl_type())],
         CLType::Unit,
         EntryPointAccess::Public,

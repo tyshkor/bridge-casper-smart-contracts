@@ -152,6 +152,18 @@ casper-client put-deploy \
     --session-arg "signer:string='<signer>'"
 ```
 
+##### Example remove_signer
+```bash
+casper-client put-deploy \
+    --chain-name casper-test \
+    --node-address http://44.208.234.65:7777 \
+    --secret-key <path-to-key> \
+    --session-hash hash-2eaf3bf2cbc8e46f56ce04904592aa530141170fbee3473baeba4edfe9e87513 \
+    --session-entry-point add_signer \
+    --payment-amount 5000000000 \
+    --session-arg "signer:string='<signer>'"
+```
+
 ##### Example withdraw_signed
 ```bash
 casper-client put-deploy \

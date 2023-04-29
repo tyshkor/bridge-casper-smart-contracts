@@ -179,4 +179,10 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
         let bridge_pool_instance = BridgePool::instance();
         bridge_pool_instance.add_signer(signer)
     }
+
+    // outer function to remove signer
+    fn remove_signer(&mut self, signer: String) {
+        let bridge_pool_instance = BridgePool::instance();
+        bridge_pool_instance.remove_signer(signer)
+    }
 }
