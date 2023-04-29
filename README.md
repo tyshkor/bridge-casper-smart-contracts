@@ -216,7 +216,7 @@ casper-client put-deploy \
 | 18   | NoTargetNetworkDictForThisToken                     |
 | 19   | NoTargetTokenInAllowedTargetsDict                   |
 | 20   | ClientDoesNotHaveAnyKindOfLiquidity                |
-| 21   | ClientDoesNotHaveSpecificKindOfLioquidity           |
+| 21   | ClientDoesNotHaveSpecificKindOfLiquidity           |
 | 22   | AlreadyInThisTargetTokenDict                        |
 | 23   | MessageAlreadyUsed                                  |
 | 24   | NoValueInSignersDict                                |

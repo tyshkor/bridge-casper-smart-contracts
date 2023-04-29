@@ -23,7 +23,7 @@ pub enum Error {
     NoTargetNetworkDictForThisToken = 18,
     NoTargetTokenInAllowedTargetsDict = 19,
     ClientDoesNotHaveAnyKindOfLiquidity = 20,
-    ClientDoesNotHaveSpecificKindOfLioquidity = 21,
+    ClientDoesNotHaveSpecificKindOfLiquidity = 21,
     AlreadyInThisTargetTokenDict = 22,
     MessageAlreadyUsed = 23,
     NoValueInSignersDict = 24,
