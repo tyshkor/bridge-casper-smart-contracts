@@ -108,12 +108,13 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
         let bridge_pool_instance = BridgePool::instance();
         bridge_pool_instance.swap(actor, token, target_token.clone(), amount, target_network)?;
 
+        let target_address = target_token.clone();
+
         self.emit(BridgePoolEvent::BridgeSwap {
             actor,
             token,
             target_network,
-            target_token,
-            target_address: actor,
+            target_address,
             amount,
         });
         Ok(())

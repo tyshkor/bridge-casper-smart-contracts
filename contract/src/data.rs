@@ -34,7 +34,6 @@ const CONTRACT_PACKAGE_HASH: &str = "contract_package_hash";
 
 const AMOUNT: &str = "amount";
 const SIGNER: &str = "signer";
-const TARGET_TOKEN: &str = "target_token";
 const TARGET_NETWORK: &str = "target_network";
 const TARGET_ADDRESS: &str = "target_address";
 const TOKEN: &str = "token";
@@ -513,7 +512,6 @@ pub fn emit(event: &BridgePoolEvent) {
             actor,
             token,
             target_network,
-            target_token,
             target_address,
             amount,
         } => {
@@ -523,21 +521,7 @@ pub fn emit(event: &BridgePoolEvent) {
             param.insert(ACTOR, (*actor).try_into().unwrap());
             param.insert(TOKEN, token.to_string());
             param.insert(TARGET_NETWORK, target_network.to_string());
-            param.insert(TARGET_TOKEN, target_token.to_string());
-            if target_address.as_account_hash().is_some() {
-                param.insert(
-                    TARGET_ADDRESS,
-                    target_address.as_account_hash().unwrap().to_string(),
-                );
-            } else {
-                param.insert(
-                    TARGET_ADDRESS,
-                    target_address
-                        .as_contract_package_hash()
-                        .unwrap()
-                        .to_string(),
-                );
-            };
+            param.insert(TARGET_ADDRESS, target_address.clone());
             param.insert(AMOUNT, amount.to_string());
             events.push(param);
         }
