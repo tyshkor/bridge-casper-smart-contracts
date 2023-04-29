@@ -149,17 +149,6 @@ pub extern "C" fn add_signer() {
 }
 
 #[no_mangle]
-pub extern "C" fn withdraw() {
-    let amount = runtime::get_named_arg::<U256>("amount");
-    let token_address = runtime::get_named_arg::<String>("token_address");
-    #[allow(clippy::let_unit_value)]
-    let ret = Contract::default()
-        .withdraw(amount, token_address)
-        .unwrap_or_revert();
-    runtime::ret(CLValue::from_t(ret).unwrap_or_revert());
-}
-
-#[no_mangle]
 pub extern "C" fn call() {
     let bridge_pool_named_keys = NamedKeys::new();
 

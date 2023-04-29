@@ -179,24 +179,4 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
         let bridge_pool_instance = BridgePool::instance();
         bridge_pool_instance.add_signer(signer)
     }
-
-    // outer function to withdraw liquidity from the pool
-    fn withdraw(&mut self, amount: U256, token_address: String) -> Result<(), Error> {
-        let token_contract_package_hash =
-            ContractPackageHash::from_formatted_str(token_address.as_str())
-                .map_err(|_| Error::NotContractPackageHash)?;
-
-        let client_address =
-            detail::get_immediate_caller_address().unwrap_or_revert_with(Error::NegativeReward);
-
-        let bridge_pool_instance = BridgePool::instance();
-        bridge_pool_instance.withdraw(token_contract_package_hash, client_address, amount)?;
-
-        self.emit(BridgePoolEvent::BridgeLiquidityRemoved {
-            actor: client_address,
-            token: token_contract_package_hash,
-            amount,
-        });
-        Ok(())
-    }
 }
