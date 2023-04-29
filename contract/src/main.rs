@@ -187,7 +187,7 @@ pub extern "C" fn call() {
         ENTRY_POINT_CONSTRUCTOR,
         vec![],
         <()>::cl_type(),
-        EntryPointAccess::Groups(vec![admin_group]),
+        EntryPointAccess::Groups(vec![admin_group.clone()]),
         EntryPointType::Contract,
     ));
 
@@ -244,7 +244,7 @@ pub extern "C" fn call() {
             Parameter::new(TARGET_TOKEN, String::cl_type()),
         ],
         CLType::Unit,
-        EntryPointAccess::Groups(vec![admin_group]),
+        EntryPointAccess::Groups(vec![admin_group.clone()]),
         EntryPointType::Contract,
     ));
 
@@ -266,7 +266,7 @@ pub extern "C" fn call() {
         ENTRY_POINT_ADD_SIGNER,
         vec![Parameter::new(SIGNER, String::cl_type())],
         CLType::Unit,
-        EntryPointAccess::Groups(vec![admin_group]),
+        EntryPointAccess::Groups(vec![admin_group.clone()]),
         EntryPointType::Contract,
     ));
 
