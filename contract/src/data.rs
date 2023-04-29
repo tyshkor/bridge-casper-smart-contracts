@@ -206,7 +206,7 @@ impl BrigdePool {
                 Err(Error::ClientDoesNotHaveSpecificKindOfLioquidity)
             }
         } else {
-            Err(Error::ClientDoesNotHaveAnyKindOfLioquidity)
+            Err(Error::ClientDoesNotHaveAnyKindOfLiquidity)
         }
     }
 
