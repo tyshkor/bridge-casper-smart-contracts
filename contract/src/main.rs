@@ -7,6 +7,7 @@ compile_error!("target arch should be wasm32: compile with '--target wasm32-unkn
 extern crate alloc;
 
 use alloc::{
+    collections::BTreeSet,
     string::{String, ToString},
     vec,
 };
@@ -15,12 +16,12 @@ use casper_contract::{
     contract_api::{runtime, storage},
     unwrap_or_revert::UnwrapOrRevert,
 };
-use casper_types::Key;
 use casper_types::RuntimeArgs;
 use casper_types::{
     contracts::{EntryPoint, EntryPointAccess, EntryPointType, EntryPoints, NamedKeys},
     runtime_args, CLType, CLTyped, CLValue, ContractPackageHash, Parameter, U256,
 };
+use casper_types::{Group, Key, URef};
 use contract_utils::{ContractContext, OnChainContractStorage};
 
 const ENTRY_POINT_GET_LIQUIDITY: &str = "get_liquidity";
@@ -49,6 +50,8 @@ const PAYEE: &str = "payee";
 const SALT: &str = "salt";
 const SIGNATURE: &str = "signature";
 const MESSAGE_HASH: &str = "message_hash";
+
+const ADMIN_GROUP: &str = "admin_group";
 
 #[derive(Default)]
 struct Contract(OnChainContractStorage);
@@ -178,11 +181,13 @@ pub extern "C" fn call() {
     // Create entry points for this contract
     let mut bridge_pool_entry_points = EntryPoints::new();
 
+    let admin_group = Group::new(ADMIN_GROUP);
+
     bridge_pool_entry_points.add_entry_point(EntryPoint::new(
         ENTRY_POINT_CONSTRUCTOR,
         vec![],
         <()>::cl_type(),
-        EntryPointAccess::Public,
+        EntryPointAccess::Groups(vec![admin_group]),
         EntryPointType::Contract,
     ));
 
@@ -239,7 +244,7 @@ pub extern "C" fn call() {
             Parameter::new(TARGET_TOKEN, String::cl_type()),
         ],
         CLType::Unit,
-        EntryPointAccess::Public,
+        EntryPointAccess::Groups(vec![admin_group]),
         EntryPointType::Contract,
     ));
 
@@ -261,7 +266,7 @@ pub extern "C" fn call() {
         ENTRY_POINT_ADD_SIGNER,
         vec![Parameter::new(SIGNER, String::cl_type())],
         CLType::Unit,
-        EntryPointAccess::Public,
+        EntryPointAccess::Groups(vec![admin_group]),
         EntryPointType::Contract,
     ));
 
@@ -269,7 +274,7 @@ pub extern "C" fn call() {
         ENTRY_POINT_REMOVE_SIGNER,
         vec![Parameter::new(SIGNER, String::cl_type())],
         CLType::Unit,
-        EntryPointAccess::Public,
+        EntryPointAccess::Groups(vec![admin_group]),
         EntryPointType::Contract,
     ));
 
@@ -292,6 +297,12 @@ pub extern "C" fn call() {
 
     let package_hash_key: Key = package_hash.into();
 
+    let constructor_access: URef =
+        storage::create_contract_user_group(package_hash, ADMIN_GROUP, 1, Default::default())
+            .unwrap_or_revert()
+            .pop()
+            .unwrap_or_revert();
+
     let _: () = runtime::call_contract(
         stored_contract_hash,
         ENTRY_POINT_CONSTRUCTOR,
@@ -299,6 +310,10 @@ pub extern "C" fn call() {
             BRIDGE_POOL_CONTRACT_PACKAGE_HASH => package_hash_key,
         },
     );
+
+    let mut urefs = BTreeSet::new();
+    urefs.insert(constructor_access);
+    storage::remove_contract_user_group_urefs(package_hash, ADMIN_GROUP, urefs).unwrap_or_revert();
 
     runtime::put_key(BRIDGE_POOL_CONTRACT_PACKAGE_HASH, package_hash_key);
 
