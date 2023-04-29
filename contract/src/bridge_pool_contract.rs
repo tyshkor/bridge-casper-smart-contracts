@@ -37,14 +37,14 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
         &mut self,
         amount: U256,
         token_address: String,
-        bridge_pool_contract_package_hash: String,
+        bridge_pool_contract_package_hash_string: String,
     ) -> Result<(), Error> {
         let token_contract_package_hash =
             ContractPackageHash::from_formatted_str(token_address.as_str())
                 .map_err(|_| Error::NotContractPackageHash)?;
 
         let bridge_pool_contract_package_hash =
-            ContractPackageHash::from_formatted_str(bridge_pool_contract_package_hash.as_str())
+            ContractPackageHash::from_formatted_str(bridge_pool_contract_package_hash_string.as_str())
                 .map_err(|_| Error::NotBridgePoolContractPackageHash)?;
 
         let client_address =
