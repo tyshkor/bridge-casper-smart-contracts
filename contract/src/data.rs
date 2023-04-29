@@ -47,7 +47,6 @@ const BRIDGE_LIQUIDITY_REMOVED: &str = "bridge_liquidity_removed";
 const BRIDGE_SWAP: &str = "bridge_swap";
 const BRIDGE_TRANSFER_BY_SIGNATURE: &str = "bridge_transfer_by_signature";
 
-
 pub struct BridgePool {
     // dictionary to track client conected dictionaries
     account_hash_liquidities_dict: Dict,
@@ -441,12 +440,11 @@ impl BridgePool {
 
     // pay from any address to this contract. Remember to approve the tokens beforehand
     fn pay_me(&self, token: ContractPackageHash, spender: Address, amount: U256) {
-        let bridge_pool_contract_package_hash =
-            runtime::get_key(BRIDGE_POOL_CONTRACT_PACKAGE_HASH)
-                .unwrap_or_revert_with(Error::MissingContractPackageHash)
-                .into_hash()
-                .map(ContractPackageHash::new)
-                .unwrap_or_revert_with(Error::InvalidContractPackageHash);
+        let bridge_pool_contract_package_hash = runtime::get_key(BRIDGE_POOL_CONTRACT_PACKAGE_HASH)
+            .unwrap_or_revert_with(Error::MissingContractPackageHash)
+            .into_hash()
+            .map(ContractPackageHash::new)
+            .unwrap_or_revert_with(Error::InvalidContractPackageHash);
         self.pay_to(
             token,
             spender,
