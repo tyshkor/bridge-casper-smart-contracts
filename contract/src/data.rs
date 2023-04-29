@@ -32,6 +32,22 @@ const BRIDGE_POOL_CONTRACT_PACKAGE_HASH: &str = "bridge_pool_contract_package_ha
 
 const CONTRACT_PACKAGE_HASH: &str = "contract_package_hash";
 
+const AMOUNT: &str = "amount";
+const SIGNER: &str = "signer";
+const TARGET_TOKEN: &str = "target_token";
+const TARGET_NETWORK: &str = "target_network";
+const TARGET_ADDRESS: &str = "target_address";
+const TOKEN: &str = "token";
+const RECEIVER: &str = "receiver";
+const ACTOR: &str = "actor";
+const EVENT_TYPE: &str = "event_type";
+
+const BRIDGE_LIQUIDITY_ADDED: &str = "bridge_liquidity_added";
+const BRIDGE_LIQUIDITY_REMOVED: &str = "bridge_liquidity_removed";
+const BRIDGE_SWAP: &str = "bridge_swap";
+const BRIDGE_TRANSFER_BY_SIGNATURE: &str = "bridge_transfer_by_signature";
+
+
 pub struct BridgePool {
     // dictionary to track client conected dictionaries
     account_hash_liquidities_dict: Dict,
@@ -418,7 +434,7 @@ impl BridgePool {
         let args = runtime_args! {
             "owner" => owner,
             "recipient" => recipient,
-            "amount" => amount
+            AMOUNT => amount
         };
         runtime::call_versioned_contract::<()>(token, None, "transfer_from", args);
     }
@@ -442,7 +458,7 @@ impl BridgePool {
     fn pay_from_me(&self, token: ContractPackageHash, recipient: Address, amount: U256) {
         let args = runtime_args! {
             "recipient" => recipient,
-            "amount" => amount
+            AMOUNT => amount
         };
         runtime::call_versioned_contract::<()>(token, None, "transfer", args);
     }
@@ -482,10 +498,10 @@ pub fn emit(event: &BridgePoolEvent) {
         } => {
             let mut param = BTreeMap::new();
             param.insert(CONTRACT_PACKAGE_HASH, package.to_string());
-            param.insert("event_type", "bridge_liquidity_added".to_string());
-            param.insert("actor", (*actor).try_into().unwrap());
-            param.insert("token", token.to_string());
-            param.insert("amount", amount.to_string());
+            param.insert(EVENT_TYPE, BRIDGE_LIQUIDITY_ADDED.to_string());
+            param.insert(ACTOR, (*actor).try_into().unwrap());
+            param.insert(TOKEN, token.to_string());
+            param.insert(AMOUNT, amount.to_string());
             events.push(param);
         }
         BridgePoolEvent::BridgeLiquidityRemoved {
@@ -495,10 +511,10 @@ pub fn emit(event: &BridgePoolEvent) {
         } => {
             let mut param = BTreeMap::new();
             param.insert(CONTRACT_PACKAGE_HASH, package.to_string());
-            param.insert("event_type", "bridge_liquidity_removed".to_string());
-            param.insert("actor", (*actor).try_into().unwrap());
-            param.insert("token", token.to_string());
-            param.insert("amount", amount.to_string());
+            param.insert(EVENT_TYPE, BRIDGE_LIQUIDITY_REMOVED.to_string());
+            param.insert(ACTOR, (*actor).try_into().unwrap());
+            param.insert(TOKEN, token.to_string());
+            param.insert(AMOUNT, amount.to_string());
             events.push(param);
         }
         BridgePoolEvent::BridgeSwap {
@@ -511,26 +527,26 @@ pub fn emit(event: &BridgePoolEvent) {
         } => {
             let mut param = BTreeMap::new();
             param.insert(CONTRACT_PACKAGE_HASH, package.to_string());
-            param.insert("event_type", "bridge_swap".to_string());
-            param.insert("actor", (*actor).try_into().unwrap());
-            param.insert("token", token.to_string());
-            param.insert("target_network", target_network.to_string());
-            param.insert("target_token", target_token.to_string());
+            param.insert(EVENT_TYPE, BRIDGE_SWAP.to_string());
+            param.insert(ACTOR, (*actor).try_into().unwrap());
+            param.insert(TOKEN, token.to_string());
+            param.insert(TARGET_NETWORK, target_network.to_string());
+            param.insert(TARGET_TOKEN, target_token.to_string());
             if target_address.as_account_hash().is_some() {
                 param.insert(
-                    "target_address",
+                    TARGET_ADDRESS,
                     target_address.as_account_hash().unwrap().to_string(),
                 );
             } else {
                 param.insert(
-                    "target_address",
+                    TARGET_ADDRESS,
                     target_address
                         .as_contract_package_hash()
                         .unwrap()
                         .to_string(),
                 );
             };
-            param.insert("amount", amount.to_string());
+            param.insert(AMOUNT, amount.to_string());
             events.push(param);
         }
         BridgePoolEvent::TransferBySignature {
@@ -541,11 +557,11 @@ pub fn emit(event: &BridgePoolEvent) {
         } => {
             let mut param = BTreeMap::new();
             param.insert(CONTRACT_PACKAGE_HASH, package.to_string());
-            param.insert("event_type", "bridge_transfer_by_signature".to_string());
-            param.insert("signer", signer.as_account_hash().unwrap().to_string());
-            param.insert("token", token.to_string());
-            param.insert("receiver", receiver.to_string());
-            param.insert("amount", amount.to_string());
+            param.insert(EVENT_TYPE, BRIDGE_TRANSFER_BY_SIGNATURE.to_string());
+            param.insert(SIGNER, signer.as_account_hash().unwrap().to_string());
+            param.insert(TOKEN, token.to_string());
+            param.insert(RECEIVER, receiver.to_string());
+            param.insert(AMOUNT, amount.to_string());
             events.push(param);
         }
     };
