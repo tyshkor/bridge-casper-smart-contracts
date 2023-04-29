@@ -31,10 +31,16 @@ const ENTRY_POINT_ALLOW_TARGET: &str = "allow_target";
 const ENTRY_POINT_WITHDRAW_SIGNED: &str = "withdraw_signed";
 const ENTRY_POINT_ADD_SIGNER: &str = "add_signer";
 const ENTRY_POINT_REMOVE_SIGNER: &str = "remove_signer";
+const ENTRY_POINT_CONSTRUCTOR: &str = "constructor";
 
 const CONTRACT_VERSION_KEY: &str = "version";
 const CONTRACT_KEY: &str = "bridge_pool";
 const BRIDGE_POOL_CONTRACT_PACKAGE_HASH: &str = "bridge_pool_contract_package_hash";
+const BRIDGE_POOL_CONTRACT_HASH: &str = "bridge_pool_contract_hash";
+const BRIDGE_POOL_PACKAGE_NAME: &str = "bridge_pool_package_name";
+const AMOUNT: &str = "amount";
+const SIGNER: &str = "signer";
+const TOKEN_ADDRESS: &str = "token_address";
 
 #[derive(Default)]
 struct Contract(OnChainContractStorage);
@@ -67,7 +73,7 @@ pub extern "C" fn constructor() {
 
 #[no_mangle]
 pub extern "C" fn get_liquidity() {
-    let token_address = runtime::get_named_arg::<String>("token_address");
+    let token_address = runtime::get_named_arg::<String>(TOKEN_ADDRESS);
     let result = Contract::default()
         .get_liquidity(token_address)
         .unwrap_or_revert();
@@ -78,8 +84,8 @@ pub extern "C" fn get_liquidity() {
 
 #[no_mangle]
 pub extern "C" fn add_liquidity() {
-    let amount = runtime::get_named_arg::<U256>("amount");
-    let token_address = runtime::get_named_arg::<String>("token_address");
+    let amount = runtime::get_named_arg::<U256>(AMOUNT);
+    let token_address = runtime::get_named_arg::<String>(TOKEN_ADDRESS);
     let bridge_pool_contract_package_hash =
         runtime::get_named_arg::<String>(BRIDGE_POOL_CONTRACT_PACKAGE_HASH);
     #[allow(clippy::let_unit_value)]
@@ -91,8 +97,8 @@ pub extern "C" fn add_liquidity() {
 
 #[no_mangle]
 pub extern "C" fn remove_liquidity() {
-    let amount = runtime::get_named_arg::<U256>("amount");
-    let token_address = runtime::get_named_arg::<String>("token_address");
+    let amount = runtime::get_named_arg::<U256>(AMOUNT);
+    let token_address = runtime::get_named_arg::<String>(TOKEN_ADDRESS);
     #[allow(clippy::let_unit_value)]
     let ret = Contract::default()
         .remove_liquidity(amount, token_address)
@@ -102,8 +108,8 @@ pub extern "C" fn remove_liquidity() {
 
 #[no_mangle]
 pub extern "C" fn swap() {
-    let amount = runtime::get_named_arg::<U256>("amount");
-    let token_address = runtime::get_named_arg::<String>("token_address");
+    let amount = runtime::get_named_arg::<U256>(AMOUNT);
+    let token_address = runtime::get_named_arg::<String>(TOKEN_ADDRESS);
     let target_network = runtime::get_named_arg::<U256>("target_network");
     let target_token = runtime::get_named_arg::<String>("target_token");
     #[allow(clippy::let_unit_value)]
@@ -115,7 +121,7 @@ pub extern "C" fn swap() {
 
 #[no_mangle]
 pub extern "C" fn allow_target() {
-    let token_address = runtime::get_named_arg::<String>("token_address");
+    let token_address = runtime::get_named_arg::<String>(TOKEN_ADDRESS);
     let token_name = runtime::get_named_arg::<String>("token_name");
     let target_network = runtime::get_named_arg::<U256>("target_network");
     let target_token = runtime::get_named_arg::<String>("target_token");
@@ -128,9 +134,9 @@ pub extern "C" fn allow_target() {
 
 #[no_mangle]
 pub extern "C" fn withdraw_signed() {
-    let token_address = runtime::get_named_arg::<String>("token_address");
+    let token_address = runtime::get_named_arg::<String>(TOKEN_ADDRESS);
     let payee = runtime::get_named_arg::<String>("payee");
-    let amount = runtime::get_named_arg::<U256>("amount");
+    let amount = runtime::get_named_arg::<U256>(AMOUNT);
     let salt = runtime::get_named_arg::<String>("salt");
     let signature = runtime::get_named_arg::<String>("signature");
     let message_hash = runtime::get_named_arg::<String>("message_hash");
@@ -143,7 +149,7 @@ pub extern "C" fn withdraw_signed() {
 
 #[no_mangle]
 pub extern "C" fn add_signer() {
-    let signer = runtime::get_named_arg::<String>("signer");
+    let signer = runtime::get_named_arg::<String>(SIGNER);
     #[allow(clippy::let_unit_value)]
     let ret = Contract::default().add_signer(signer);
     runtime::ret(CLValue::from_t(ret).unwrap_or_revert());
@@ -151,7 +157,7 @@ pub extern "C" fn add_signer() {
 
 #[no_mangle]
 pub extern "C" fn remove_signer() {
-    let signer = runtime::get_named_arg::<String>("signer");
+    let signer = runtime::get_named_arg::<String>(SIGNER);
     #[allow(clippy::let_unit_value)]
     let ret = Contract::default().remove_signer(signer);
     runtime::ret(CLValue::from_t(ret).unwrap_or_revert());
@@ -165,7 +171,7 @@ pub extern "C" fn call() {
     let mut bridge_pool_entry_points = EntryPoints::new();
 
     bridge_pool_entry_points.add_entry_point(EntryPoint::new(
-        "constructor",
+        ENTRY_POINT_CONSTRUCTOR,
         vec![],
         <()>::cl_type(),
         EntryPointAccess::Public,
@@ -174,7 +180,7 @@ pub extern "C" fn call() {
 
     bridge_pool_entry_points.add_entry_point(EntryPoint::new(
         ENTRY_POINT_GET_LIQUIDITY,
-        vec![Parameter::new("token_address", String::cl_type())],
+        vec![Parameter::new(TOKEN_ADDRESS, String::cl_type())],
         CLType::U256,
         EntryPointAccess::Public,
         EntryPointType::Contract,
@@ -183,9 +189,9 @@ pub extern "C" fn call() {
     bridge_pool_entry_points.add_entry_point(EntryPoint::new(
         ENTRY_POINT_ADD_LIQUIDITY,
         vec![
-            Parameter::new("amount", U256::cl_type()),
-            Parameter::new("token_address", String::cl_type()),
-            Parameter::new("bridge_pool_contract_package_hash", String::cl_type()),
+            Parameter::new(AMOUNT, U256::cl_type()),
+            Parameter::new(TOKEN_ADDRESS, String::cl_type()),
+            Parameter::new(BRIDGE_POOL_CONTRACT_PACKAGE_HASH, String::cl_type()),
         ],
         CLType::Unit,
         EntryPointAccess::Public,
@@ -195,8 +201,8 @@ pub extern "C" fn call() {
     bridge_pool_entry_points.add_entry_point(EntryPoint::new(
         ENTRY_POINT_REMOVE_LIQUIDITY,
         vec![
-            Parameter::new("amount", U256::cl_type()),
-            Parameter::new("token_address", String::cl_type()),
+            Parameter::new(AMOUNT, U256::cl_type()),
+            Parameter::new(TOKEN_ADDRESS, String::cl_type()),
         ],
         CLType::Unit,
         EntryPointAccess::Public,
@@ -206,8 +212,8 @@ pub extern "C" fn call() {
     bridge_pool_entry_points.add_entry_point(EntryPoint::new(
         ENTRY_POINT_SWAP,
         vec![
-            Parameter::new("amount", U256::cl_type()),
-            Parameter::new("token_address", String::cl_type()),
+            Parameter::new(AMOUNT, U256::cl_type()),
+            Parameter::new(TOKEN_ADDRESS, String::cl_type()),
             Parameter::new("target_network", U256::cl_type()),
             Parameter::new("target_token", String::cl_type()),
         ],
@@ -219,7 +225,7 @@ pub extern "C" fn call() {
     bridge_pool_entry_points.add_entry_point(EntryPoint::new(
         ENTRY_POINT_ALLOW_TARGET,
         vec![
-            Parameter::new("token_address", String::cl_type()),
+            Parameter::new(TOKEN_ADDRESS, String::cl_type()),
             Parameter::new("token_name", String::cl_type()),
             Parameter::new("target_network", U256::cl_type()),
             Parameter::new("target_token", String::cl_type()),
@@ -232,9 +238,9 @@ pub extern "C" fn call() {
     bridge_pool_entry_points.add_entry_point(EntryPoint::new(
         ENTRY_POINT_WITHDRAW_SIGNED,
         vec![
-            Parameter::new("token_address", String::cl_type()),
+            Parameter::new(TOKEN_ADDRESS, String::cl_type()),
             Parameter::new("payee", String::cl_type()),
-            Parameter::new("amount", U256::cl_type()),
+            Parameter::new(AMOUNT, U256::cl_type()),
             Parameter::new("salt", String::cl_type()),
             Parameter::new("signature", String::cl_type()),
         ],
@@ -245,7 +251,7 @@ pub extern "C" fn call() {
 
     bridge_pool_entry_points.add_entry_point(EntryPoint::new(
         ENTRY_POINT_ADD_SIGNER,
-        vec![Parameter::new("signer", String::cl_type())],
+        vec![Parameter::new(SIGNER, String::cl_type())],
         CLType::Unit,
         EntryPointAccess::Public,
         EntryPointType::Contract,
@@ -253,7 +259,7 @@ pub extern "C" fn call() {
 
     bridge_pool_entry_points.add_entry_point(EntryPoint::new(
         ENTRY_POINT_REMOVE_SIGNER,
-        vec![Parameter::new("signer", String::cl_type())],
+        vec![Parameter::new(SIGNER, String::cl_type())],
         CLType::Unit,
         EntryPointAccess::Public,
         EntryPointType::Contract,
@@ -263,14 +269,14 @@ pub extern "C" fn call() {
     let (stored_contract_hash, contract_version) = storage::new_contract(
         bridge_pool_entry_points,
         Some(bridge_pool_named_keys),
-        Some("bridge_pool_package_name".to_string()),
+        Some(BRIDGE_POOL_PACKAGE_NAME.to_string()),
         Some("bridge_pool_access_uref".to_string()),
     );
 
-    runtime::put_key("bridge_pool_contract_hash", stored_contract_hash.into());
+    runtime::put_key(BRIDGE_POOL_CONTRACT_HASH, stored_contract_hash.into());
 
     let package_hash: ContractPackageHash = ContractPackageHash::new(
-        runtime::get_key("bridge_pool_package_name")
+        runtime::get_key(BRIDGE_POOL_PACKAGE_NAME)
             .unwrap_or_revert()
             .into_hash()
             .unwrap_or_revert(),
@@ -280,13 +286,13 @@ pub extern "C" fn call() {
 
     let _: () = runtime::call_contract(
         stored_contract_hash,
-        "constructor",
+        ENTRY_POINT_CONSTRUCTOR,
         runtime_args! {
-            "bridge_pool_contract_package_hash" => package_hash_key,
+            BRIDGE_POOL_CONTRACT_PACKAGE_HASH => package_hash_key,
         },
     );
 
-    runtime::put_key("bridge_pool_contract_package_hash", package_hash_key);
+    runtime::put_key(BRIDGE_POOL_CONTRACT_PACKAGE_HASH, package_hash_key);
 
     /* To create a locked contract instead, use new_locked_contract and throw away the contract version returned
     let (stored_contract_hash, _) =
