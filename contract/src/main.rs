@@ -53,6 +53,7 @@ const MESSAGE_HASH: &str = "message_hash";
 
 const CONSTRUCTOR_GROUP: &str = "constructor_group";
 const ADMIN_GROUP: &str = "admin_group";
+const ADMIN_ACCESS_UREF: &str = "admin_access_uref";
 
 #[derive(Default)]
 struct Contract(OnChainContractStorage);
@@ -245,8 +246,7 @@ pub extern "C" fn call() {
             Parameter::new(TARGET_TOKEN, String::cl_type()),
         ],
         CLType::Unit,
-        EntryPointAccess::Public,
-        // EntryPointAccess::Groups(vec![admin_group.clone()]),
+        EntryPointAccess::Groups(vec![admin_group.clone()]),
         EntryPointType::Contract,
     ));
 
@@ -268,8 +268,7 @@ pub extern "C" fn call() {
         ENTRY_POINT_ADD_SIGNER,
         vec![Parameter::new(SIGNER, String::cl_type())],
         CLType::Unit,
-        EntryPointAccess::Public,
-        // EntryPointAccess::Groups(vec![admin_group.clone()]),
+        EntryPointAccess::Groups(vec![admin_group.clone()]),
         EntryPointType::Contract,
     ));
 
@@ -277,8 +276,7 @@ pub extern "C" fn call() {
         ENTRY_POINT_REMOVE_SIGNER,
         vec![Parameter::new(SIGNER, String::cl_type())],
         CLType::Unit,
-        EntryPointAccess::Public,
-        // EntryPointAccess::Groups(vec![admin_group]),
+        EntryPointAccess::Groups(vec![admin_group]),
         EntryPointType::Contract,
     ));
 
@@ -320,14 +318,10 @@ pub extern "C" fn call() {
     storage::remove_contract_user_group_urefs(package_hash, CONSTRUCTOR_GROUP, urefs)
         .unwrap_or_revert();
 
-    let mut admin_urefs = BTreeSet::new();
-    admin_urefs.insert(constructor_access);
-
-    // storage::create_contract_user_group(package_hash, ADMIN_GROUP, 1, admin_urefs)
-    //     .unwrap_or_revert();
-
-    storage::create_contract_user_group(package_hash, ADMIN_GROUP, 1, Default::default())
-        .unwrap_or_revert();
+    let mut admin_group =
+        storage::create_contract_user_group(package_hash, ADMIN_GROUP, 1, Default::default())
+            .unwrap();
+    runtime::put_key(ADMIN_ACCESS_UREF, admin_group.pop().unwrap().into());
 
     runtime::put_key(BRIDGE_POOL_CONTRACT_PACKAGE_HASH, package_hash_key);
 
