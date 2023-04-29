@@ -437,19 +437,6 @@ impl BridgePool {
     }
 
     fn pay_from_me(&self, token: ContractPackageHash, recipient: Address, amount: U256) {
-        // let bridge_pool_contract_package_hash =
-        //     runtime::get_key("bridge_pool_contract_package_hash")
-        //         .unwrap_or_revert_with(Error::MissingContractPackageHash)
-        //         .into_hash()
-        //         .map(|hash_address| ContractPackageHash::new(hash_address))
-        //         .unwrap_or_revert_with(Error::InvalidContractPackageHash);
-        // self.approve_spender(token, recipient, amount);
-        // self.pay_to(
-        //     token,
-        //     crate::address::Address::ContractPackage(bridge_pool_contract_package_hash),
-        //     recipient,
-        //     amount,
-        // )
         let args = runtime_args! {
             "recipient" => recipient,
             "amount" => amount
