@@ -189,7 +189,7 @@ casper-client put-deploy \
 | BridgeLiquidityAdded      | actor (Key) , token (Key), amount (U256)                                                                      |
 | BridgeLiquidityRemoved    | actor (Key) , token (Key), amount (U256)                                                                      |
 | BridgeSwap                | actor (Key) , token (Key), target_network: U256, target_token (String) , target_address (Key) , amount (U256) |
-| TransferBySignature       | signer (Key), reciever (String), token (Key) , amount (U256)                                                  |
+| TransferBySignature       | signer (Key), receiver (String), token (Key) , amount (U256)                                                  |
 
 
 ## Error Codes

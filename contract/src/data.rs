@@ -594,7 +594,7 @@ pub fn emit(event: &BridgePoolEvent) {
         }
         BridgePoolEvent::TransferBySignature {
             signer,
-            reciever,
+            receiver,
             token,
             amount,
         } => {
@@ -603,7 +603,7 @@ pub fn emit(event: &BridgePoolEvent) {
             param.insert("event_type", "bridge_transfer_by_signature".to_string());
             param.insert("signer", signer.as_account_hash().unwrap().to_string());
             param.insert("token", token.to_string());
-            param.insert("reciever", reciever.to_string());
+            param.insert("receiver", receiver.to_string());
             param.insert("amount", amount.to_string());
             events.push(param);
         }
