@@ -450,7 +450,7 @@ impl BridgePool {
         match client_address {
             Address::Account(_) => Ok(&self.account_hash_liquidities_dict),
             Address::ContractPackage(_) => Ok(&self.hash_addr_liquidities_dict),
-            Address::ContractHash(_) => return Err(Error::UnexpectedContractHash),
+            Address::ContractHash(_) => Err(Error::UnexpectedContractHash),
         }
     }
 }
@@ -482,10 +482,7 @@ pub fn emit(event: &BridgePoolEvent) {
             let mut param = BTreeMap::new();
             param.insert(CONTRACT_PACKAGE_HASH, package.to_string());
             param.insert("event_type", "bridge_liquidity_added".to_string());
-            param.insert(
-                "actor",
-                (*actor).try_into().unwrap(),
-            );
+            param.insert("actor", (*actor).try_into().unwrap());
             param.insert("token", token.to_string());
             param.insert("amount", amount.to_string());
             events.push(param);
@@ -498,10 +495,7 @@ pub fn emit(event: &BridgePoolEvent) {
             let mut param = BTreeMap::new();
             param.insert(CONTRACT_PACKAGE_HASH, package.to_string());
             param.insert("event_type", "bridge_liquidity_removed".to_string());
-            param.insert(
-                "actor",
-                (*actor).try_into().unwrap(),
-            );
+            param.insert("actor", (*actor).try_into().unwrap());
             param.insert("token", token.to_string());
             param.insert("amount", amount.to_string());
             events.push(param);
@@ -517,10 +511,7 @@ pub fn emit(event: &BridgePoolEvent) {
             let mut param = BTreeMap::new();
             param.insert(CONTRACT_PACKAGE_HASH, package.to_string());
             param.insert("event_type", "bridge_swap".to_string());
-            param.insert(
-                "actor",
-                (*actor).try_into().unwrap(),
-            );
+            param.insert("actor", (*actor).try_into().unwrap());
             param.insert("token", token.to_string());
             param.insert("target_network", target_network.to_string());
             param.insert("target_token", target_token.to_string());

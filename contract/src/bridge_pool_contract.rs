@@ -43,9 +43,10 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
             ContractPackageHash::from_formatted_str(token_address.as_str())
                 .map_err(|_| Error::NotContractPackageHash)?;
 
-        let bridge_pool_contract_package_hash =
-            ContractPackageHash::from_formatted_str(bridge_pool_contract_package_hash_string.as_str())
-                .map_err(|_| Error::NotBridgePoolContractPackageHash)?;
+        let bridge_pool_contract_package_hash = ContractPackageHash::from_formatted_str(
+            bridge_pool_contract_package_hash_string.as_str(),
+        )
+        .map_err(|_| Error::NotBridgePoolContractPackageHash)?;
 
         let client_address =
             detail::get_immediate_caller_address().unwrap_or_revert_with(Error::NegativeReward);
