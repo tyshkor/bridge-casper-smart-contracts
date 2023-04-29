@@ -42,6 +42,7 @@ pub enum Error {
     EcdsaPublicKeyRecoveryFail = 37,
     MessageHashHexDecodingFail = 38,
     PublicKeyTryIntoFail = 39,
+    ImmediateCallerFail = 40,
 }
 
 impl From<Error> for ApiError {

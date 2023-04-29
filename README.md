@@ -234,6 +234,7 @@ casper-client put-deploy \
 | 37   | EcdsaPublicKeyRecoveryFail                          |
 | 38   | MessageHashHexDecodingFail                          |
 | 39   | PublicKeyTryIntoFail                                |
+| 40   | ImmediateCallerFail                                 |
 
 ## Contributing
 

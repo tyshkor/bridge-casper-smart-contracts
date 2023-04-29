@@ -550,7 +550,7 @@ pub fn emit(event: &BridgePoolEvent) {
             let mut param = BTreeMap::new();
             param.insert(CONTRACT_PACKAGE_HASH, package.to_string());
             param.insert(EVENT_TYPE, BRIDGE_TRANSFER_BY_SIGNATURE.to_string());
-            param.insert(SIGNER, signer.as_account_hash().unwrap().to_string());
+            param.insert(SIGNER, signer.clone());
             param.insert(TOKEN, token.to_string());
             param.insert(RECEIVER, receiver.to_string());
             param.insert(AMOUNT, amount.to_string());

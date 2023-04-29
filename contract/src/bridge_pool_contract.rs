@@ -24,8 +24,8 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
             ContractPackageHash::from_formatted_str(token_address.as_str())
                 .map_err(|_| Error::NotContractPackageHash)?;
 
-        let client_address =
-            detail::get_immediate_caller_address().unwrap_or_revert_with(Error::NegativeReward);
+        let client_address = detail::get_immediate_caller_address()
+            .unwrap_or_revert_with(Error::ImmediateCallerFail);
 
         let bridge_pool_instance = BridgePool::instance();
         bridge_pool_instance
@@ -48,8 +48,8 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
         )
         .map_err(|_| Error::NotBridgePoolContractPackageHash)?;
 
-        let client_address =
-            detail::get_immediate_caller_address().unwrap_or_revert_with(Error::NegativeReward);
+        let client_address = detail::get_immediate_caller_address()
+            .unwrap_or_revert_with(Error::ImmediateCallerFail);
 
         let bridge_pool_instance = BridgePool::instance();
         bridge_pool_instance.add_liquidity(
@@ -73,8 +73,8 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
             ContractPackageHash::from_formatted_str(token_address.as_str())
                 .map_err(|_| Error::NotContractPackageHash)?;
 
-        let client_address =
-            detail::get_immediate_caller_address().unwrap_or_revert_with(Error::NegativeReward);
+        let client_address = detail::get_immediate_caller_address()
+            .unwrap_or_revert_with(Error::ImmediateCallerFail);
 
         let bridge_pool_instance = BridgePool::instance();
         bridge_pool_instance.remove_liquidity(
@@ -99,8 +99,8 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
         target_network: U256,
         target_token: String,
     ) -> Result<(), Error> {
-        let actor =
-            detail::get_immediate_caller_address().unwrap_or_revert_with(Error::NegativeReward);
+        let actor = detail::get_immediate_caller_address()
+            .unwrap_or_revert_with(Error::ImmediateCallerFail);
 
         let token = ContractPackageHash::from_formatted_str(token_address.as_str())
             .map_err(|_| Error::NotContractPackageHash)?;
@@ -145,8 +145,8 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
         signature: String,
         message_hash: String,
     ) -> Result<(), Error> {
-        let actor =
-            detail::get_immediate_caller_address().unwrap_or_revert_with(Error::NegativeReward);
+        let actor = detail::get_immediate_caller_address()
+            .unwrap_or_revert_with(Error::ImmediateCallerFail);
 
         let token = ContractPackageHash::from_formatted_str(token_address.as_str())
             .map_err(|_| Error::NotContractPackageHash)?;
@@ -166,8 +166,9 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
             signature_vec,
             message_hash,
         )?;
+        let signer = payee.clone();
         self.emit(BridgePoolEvent::TransferBySignature {
-            signer: actor,
+            signer,
             receiver: payee,
             token,
             amount,

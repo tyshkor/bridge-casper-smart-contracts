@@ -27,7 +27,7 @@ pub enum BridgePoolEvent {
     },
     // event dispatched in case of transfer by signature has happened
     TransferBySignature {
-        signer: Address,
+        signer: String,
         receiver: String,
         token: ContractPackageHash,
         amount: U256,
