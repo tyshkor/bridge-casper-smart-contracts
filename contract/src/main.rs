@@ -51,6 +51,7 @@ const SALT: &str = "salt";
 const SIGNATURE: &str = "signature";
 const MESSAGE_HASH: &str = "message_hash";
 
+const CONSTRUCTOR_GROUP: &str = "constructor_group";
 const ADMIN_GROUP: &str = "admin_group";
 
 #[derive(Default)]
@@ -298,10 +299,16 @@ pub extern "C" fn call() {
     let package_hash_key: Key = package_hash.into();
 
     let constructor_access: URef =
-        storage::create_contract_user_group(package_hash, ADMIN_GROUP, 1, Default::default())
+        storage::create_contract_user_group(package_hash, CONSTRUCTOR_GROUP, 1, Default::default())
             .unwrap_or_revert()
             .pop()
             .unwrap_or_revert();
+
+    let mut admin_urefs = BTreeSet::new();
+    admin_urefs.insert(constructor_access);
+
+    storage::create_contract_user_group(package_hash, ADMIN_GROUP, 1, admin_urefs)
+        .unwrap_or_revert();
 
     let _: () = runtime::call_contract(
         stored_contract_hash,
@@ -313,7 +320,8 @@ pub extern "C" fn call() {
 
     let mut urefs = BTreeSet::new();
     urefs.insert(constructor_access);
-    storage::remove_contract_user_group_urefs(package_hash, ADMIN_GROUP, urefs).unwrap_or_revert();
+    storage::remove_contract_user_group_urefs(package_hash, CONSTRUCTOR_GROUP, urefs)
+        .unwrap_or_revert();
 
     runtime::put_key(BRIDGE_POOL_CONTRACT_PACKAGE_HASH, package_hash_key);
 
