@@ -164,7 +164,7 @@ pub extern "C" fn withdraw_signed() {
 pub extern "C" fn add_signer() {
     let signer = runtime::get_named_arg::<String>(SIGNER);
     #[allow(clippy::let_unit_value)]
-    let ret = Contract::default().add_signer(signer);
+    let ret = Contract::default().add_signer(signer).unwrap_or_revert();
     runtime::ret(CLValue::from_t(ret).unwrap_or_revert());
 }
 

@@ -43,6 +43,7 @@ pub enum Error {
     MessageHashHexDecodingFail = 38,
     PublicKeyTryIntoFail = 39,
     ImmediateCallerFail = 40,
+    SignerWrongFormat = 41,
 }
 
 impl From<Error> for ApiError {

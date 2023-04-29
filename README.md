@@ -235,6 +235,7 @@ casper-client put-deploy \
 | 38   | MessageHashHexDecodingFail                          |
 | 39   | PublicKeyTryIntoFail                                |
 | 40   | ImmediateCallerFail                                 |
+| 41   | SignerWrongFormat                                   |
 
 ## Contributing
 

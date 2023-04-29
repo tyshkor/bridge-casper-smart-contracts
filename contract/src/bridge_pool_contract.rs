@@ -108,7 +108,7 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
         let bridge_pool_instance = BridgePool::instance();
         bridge_pool_instance.swap(actor, token, target_token.clone(), amount, target_network)?;
 
-        let target_address = target_token.clone();
+        let target_address = target_token;
 
         self.emit(BridgePoolEvent::BridgeSwap {
             actor,
@@ -178,9 +178,14 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
     }
 
     // outer function to add signer
-    fn add_signer(&mut self, signer: String) {
+    fn add_signer(&mut self, signer: String) -> Result<(), Error> {
         let bridge_pool_instance = BridgePool::instance();
-        bridge_pool_instance.add_signer(signer)
+        if !is_lowercase(&signer) {
+            Err(Error::SignerWrongFormat)
+        } else {
+            bridge_pool_instance.add_signer(signer);
+            Ok(())
+        }
     }
 
     // outer function to remove signer
@@ -188,4 +193,13 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
         let bridge_pool_instance = BridgePool::instance();
         bridge_pool_instance.remove_signer(signer)
     }
+}
+
+fn is_lowercase(s: &str) -> bool {
+    for c in s.chars() {
+        if !c.is_ascii_lowercase() {
+            return false;
+        }
+    }
+    true
 }
