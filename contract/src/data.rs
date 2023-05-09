@@ -173,7 +173,7 @@ impl BridgePool {
     ) -> Result<(), Error> {
         let client_string: String = TryInto::try_into(client_address)?;
         self.pay_from_me(token_contract_package_hash, client_address, amount);
-        self.remove_liquidity_generic(
+        self.del_liquidity_generic_from_dict(
             token_contract_package_hash.to_string(),
             client_string,
             amount,
@@ -183,7 +183,7 @@ impl BridgePool {
     }
 
     // generic function to handle the case of a client and a contract when removing liquidity
-    fn remove_liquidity_generic(
+    fn del_liquidity_generic_from_dict(
         &self,
         token_contract_hash: String,
         client: String,
@@ -216,7 +216,7 @@ impl BridgePool {
     ) -> Result<(), Error> {
         let client_string: String = TryInto::try_into(client_address)?;
         self.pay_from_me(token_contract_package_hash, client_address, amount);
-        self.remove_liquidity_generic(
+        self.del_liquidity_generic_from_dict(
             token_contract_package_hash.to_string(),
             client_string,
             amount,
@@ -273,7 +273,7 @@ impl BridgePool {
             return Err(Error::InvalidSigner);
         }
         self.pay_from_me(token_contract_package_hash, actor, amount);
-        self.remove_liquidity_generic(
+        self.del_liquidity_generic_from_dict(
             token_contract_package_hash.to_string(),
             actor.as_account_hash().unwrap().to_string(),
             amount,
