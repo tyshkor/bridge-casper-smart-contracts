@@ -847,22 +847,8 @@ mod tests {
             panic!();
         };
 
-        println!("signature_rec is {:?}", signature_rec);
-
-        let q =
-            contract_utils::keccak::ecdsa_recover(&message_hash_bytes[..], &signature_rec).unwrap();
-
-        println!("q is {:?}", q);
-
-        let signer_string = hex::encode(q);
-
-        println!("signer_string in hex  is {:?}", signer_string);
-
-        let from_signer_unique = signer_unique(message_hash, signature_pre.to_vec());
-
-        println!(
-            "from_signer_unique in hex  is {:?}",
-            hex::encode(from_signer_unique)
+        let signer_string = hex::encode(
+            contract_utils::keccak::ecdsa_recover(&message_hash_bytes[..], &signature_rec).unwrap(),
         );
 
         builder
