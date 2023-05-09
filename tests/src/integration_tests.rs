@@ -795,7 +795,7 @@ mod tests {
             bridge_pool_contract_package_hash.to_formatted_string();
 
         let add_liquidity_args = runtime_args! {
-            "amount" => U256::from(1i64),
+            "amount" => U256::from(9i64),
             "token_address" => erc20_contract_package_hash_string.clone(),
             "bridge_pool_contract_package_hash" => bridge_pool_contract_package_hash_string ,
         };
@@ -808,30 +808,38 @@ mod tests {
         )
         .build();
 
-        let salt_array: [u8; 32] = hex::decode("6b166cc8016d4ddb7a2578245ac9de73bd95f30ea960ab53dec02141623832dd").unwrap()
-            .try_into().unwrap();
+        let salt_array: [u8; 32] =
+            hex::decode("6b166cc8016d4ddb7a2578245ac9de73bd95f30ea960ab53dec02141623832dd")
+                .unwrap()
+                .try_into()
+                .unwrap();
 
         let message_hash = contract_utils::keccak::message_hash(
             erc20_contract_package_hash_string.clone(),
             "0Bdb79846e8331A19A65430363f240Ec8aCC2A52".to_string(),
             U256::from(1i64).to_string(),
-            1,
+            1i64,
             salt_array,
         );
 
         let private_key_str = "a7a08a23f69090a53a32814da1d262c8d2728d16bce420ae143978d85a06be49";
-        let private_key_bytes =  hex::decode(private_key_str).unwrap();
+        let private_key_bytes = hex::decode(private_key_str).unwrap();
 
-        let signature_pre = contract_utils::keccak::ecdsa_sign(&hex::decode(message_hash.clone()).unwrap(), &private_key_bytes);
+        let signature_pre = contract_utils::keccak::ecdsa_sign(
+            &hex::decode(message_hash.clone()).unwrap(),
+            &private_key_bytes,
+        );
 
         println!("signature is {}", hex::encode(signature_pre));
 
         println!("amount is {}", U256::from(1i64).to_string());
 
-        println!("erc20_contract_package_hash_string is {}", erc20_contract_package_hash_string);
+        println!(
+            "erc20_contract_package_hash_string is {}",
+            erc20_contract_package_hash_string
+        );
 
-        let message_hash_bytes =
-            hex::decode(message_hash.clone()).unwrap();
+        let message_hash_bytes = hex::decode(message_hash.clone()).unwrap();
 
         let signature_rec = if signature_pre.len() == 65 {
             RecoverableSignature::from_bytes(&signature_pre[..]).unwrap()
@@ -841,11 +849,10 @@ mod tests {
 
         println!("signature_rec is {:?}", signature_rec);
 
-        let q = contract_utils::keccak::ecdsa_recover(&message_hash_bytes[..], &signature_rec).unwrap();
+        let q =
+            contract_utils::keccak::ecdsa_recover(&message_hash_bytes[..], &signature_rec).unwrap();
 
         println!("q is {:?}", q);
-
-        
 
         let signer_string = hex::encode(q);
 
@@ -853,7 +860,10 @@ mod tests {
 
         let from_signer_unique = signer_unique(message_hash, signature_pre.to_vec());
 
-        println!("from_signer_unique in hex  is {:?}", hex::encode(from_signer_unique));
+        println!(
+            "from_signer_unique in hex  is {:?}",
+            hex::encode(from_signer_unique)
+        );
 
         builder
             .exec(add_liquidity_request)
@@ -861,7 +871,7 @@ mod tests {
             .commit();
 
         let add_signer_args = runtime_args! {
-            "signer" => signer_string,
+            "signer" => signer_string.clone(),
         };
 
         let add_signer_request = ExecuteRequestBuilder::contract_call_by_hash(
@@ -874,11 +884,27 @@ mod tests {
 
         builder.exec(add_signer_request).expect_success().commit();
 
+        let check_signer_args = runtime_args! {
+            "signer" => signer_string.clone(),
+        };
+
+        let check_signer_request = ExecuteRequestBuilder::contract_call_by_hash(
+            *DEFAULT_ACCOUNT_ADDR,
+            bridge_pool_contract_hash,
+            "check_signer",
+            check_signer_args,
+        )
+        .build();
+
+        builder.exec(check_signer_request).expect_success().commit();
+
+        let signature_string: String = hex::encode(signature_pre);
+
         let withdraw_signed_args = runtime_args! {
             "amount" => U256::from(1i64),
             "token_address" => erc20_contract_package_hash_string,
             "payee" => "0Bdb79846e8331A19A65430363f240Ec8aCC2A52".to_string(),
-            "signature" => hex::encode(signature_pre),
+            "signature" => signature_string,
             "chain_id" => 1u64,
             "salt" => "6b166cc8016d4ddb7a2578245ac9de73bd95f30ea960ab53dec02141623832dd".to_string(),
         };
@@ -1326,10 +1352,7 @@ fn main() {
     panic!("Execute \"cargo test\" to test the contract, not \"cargo run\".");
 }
 
-pub fn signer_unique(
-    message_hash: String,
-    signature: Vec<u8>,
-) -> Vec<u8> {
+pub fn signer_unique(message_hash: String, signature: Vec<u8>) -> Vec<u8> {
     let signature_rec = if signature.len() == 65 {
         let mut signature_vec: Vec<u8> = signature;
         RecoverableSignature::from_bytes(&signature_vec[..]).unwrap()
@@ -1337,8 +1360,7 @@ pub fn signer_unique(
         panic!();
     };
 
-    let message_hash_bytes =
-        hex::decode(message_hash.clone()).unwrap();
+    let message_hash_bytes = hex::decode(message_hash.clone()).unwrap();
 
     let public_key =
         contract_utils::keccak::ecdsa_recover(&message_hash_bytes[..], &signature_rec).unwrap();

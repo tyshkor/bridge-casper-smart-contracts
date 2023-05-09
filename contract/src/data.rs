@@ -235,20 +235,27 @@ impl BridgePool {
         self.signers_dict.remove::<bool>(&signer)
     }
 
+    pub fn check_signer(&self, signer: String) -> Result<bool, Error> {
+        Ok(self
+            .signers_dict
+            .get::<bool>(&signer)
+            .ok_or(Error::NoValueInSignersDict)?)
+    }
+
     // withdraw liquidity from pool securely
     pub fn withdraw_signed(
         &self,
         token_contract_package_hash: ContractPackageHash,
-        payee: Address,
+        payee: String,
         amount: U256,
         chain_id: u64,
         salt: [u8; 32],
         signature: alloc::vec::Vec<u8>,
-    ) -> Result<(), Error> {
-        let payee_string = payee.as_account_hash().unwrap().to_string();
+        actor: Address,
+    ) -> Result<String, Error> {
         let message_hash = contract_utils::keccak::message_hash(
             token_contract_package_hash.to_formatted_string(),
-            payee_string.clone(),
+            payee.clone(),
             amount.to_string(),
             chain_id as i64,
             salt,
@@ -263,14 +270,14 @@ impl BridgePool {
         {
             return Err(Error::InvalidSigner);
         }
-        self.pay_from_me(token_contract_package_hash, payee, amount);
+        self.pay_from_me(token_contract_package_hash, actor, amount);
         self.remove_liquidity_generic(
             token_contract_package_hash.to_string(),
-            payee_string,
+            actor.as_account_hash().unwrap().to_string(),
             amount,
-            self.get_dict(payee)?,
+            self.get_dict(actor)?,
         )?;
-        Ok(())
+        Ok(signer_string)
     }
 
     // function to build signed message

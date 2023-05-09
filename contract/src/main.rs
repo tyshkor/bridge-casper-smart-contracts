@@ -33,6 +33,7 @@ const ENTRY_POINT_WITHDRAW_SIGNED: &str = "withdraw_signed";
 const ENTRY_POINT_ADD_SIGNER: &str = "add_signer";
 const ENTRY_POINT_REMOVE_SIGNER: &str = "remove_signer";
 const ENTRY_POINT_CONSTRUCTOR: &str = "constructor";
+const ENTRY_POINT_CHECK_SIGNER: &str = "check_signer";
 
 const CONTRACT_VERSION_KEY: &str = "version";
 const CONTRACT_KEY: &str = "bridge_pool";
@@ -146,7 +147,7 @@ pub extern "C" fn allow_target() {
 }
 
 #[no_mangle]
-pub extern "C" fn withdraw_signed() {    
+pub extern "C" fn withdraw_signed() {
     let token_address = runtime::get_named_arg::<String>(TOKEN_ADDRESS);
     let payee = runtime::get_named_arg::<String>(PAYEE);
     let amount = runtime::get_named_arg::<U256>(AMOUNT);
@@ -165,6 +166,14 @@ pub extern "C" fn add_signer() {
     let signer = runtime::get_named_arg::<String>(SIGNER);
     #[allow(clippy::let_unit_value)]
     let ret = Contract::default().add_signer(signer).unwrap_or_revert();
+    runtime::ret(CLValue::from_t(ret).unwrap_or_revert());
+}
+
+#[no_mangle]
+pub extern "C" fn check_signer() {
+    let signer = runtime::get_named_arg::<String>(SIGNER);
+    #[allow(clippy::let_unit_value)]
+    let ret = Contract::default().check_signer(signer).unwrap_or_revert();
     runtime::ret(CLValue::from_t(ret).unwrap_or_revert());
 }
 
@@ -277,7 +286,15 @@ pub extern "C" fn call() {
         ENTRY_POINT_REMOVE_SIGNER,
         vec![Parameter::new(SIGNER, String::cl_type())],
         CLType::Unit,
-        EntryPointAccess::Groups(vec![admin_group]),
+        EntryPointAccess::Groups(vec![admin_group.clone()]),
+        EntryPointType::Contract,
+    ));
+
+    bridge_pool_entry_points.add_entry_point(EntryPoint::new(
+        ENTRY_POINT_CHECK_SIGNER,
+        vec![Parameter::new(SIGNER, String::cl_type())],
+        CLType::Bool,
+        EntryPointAccess::Groups(vec![admin_group.clone()]),
         EntryPointType::Contract,
     ));
 

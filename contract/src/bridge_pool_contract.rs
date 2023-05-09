@@ -159,15 +159,15 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
         let signature_vec = hex::decode(signature).unwrap();
 
         let bridge_pool_instance = BridgePool::instance();
-        bridge_pool_instance.withdraw_signed(
+        let signer = bridge_pool_instance.withdraw_signed(
             token,
-            actor,
+            payee.clone(),
             amount,
             chain_id,
             salt_array,
             signature_vec,
+            actor,
         )?;
-        let signer = payee.clone();
         self.emit(BridgePoolEvent::TransferBySignature {
             signer,
             receiver: payee,
@@ -192,6 +192,12 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
     fn remove_signer(&mut self, signer: String) {
         let bridge_pool_instance = BridgePool::instance();
         bridge_pool_instance.remove_signer(signer)
+    }
+
+    // outer function to add signer
+    fn check_signer(&mut self, signer: String) -> Result<bool, Error> {
+        let bridge_pool_instance = BridgePool::instance();
+        Ok(bridge_pool_instance.check_signer(signer)?)
     }
 }
 
