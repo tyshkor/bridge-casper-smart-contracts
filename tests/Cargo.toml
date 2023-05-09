@@ -12,6 +12,8 @@ base64 = { version = "0.13.0" }
 blake2 = { version = "0.9.0", default-features = false }
 test-env = { path = "../utils/test-env" }
 hex = "0.4.3"
+contract-utils = { path = "../utils/contract-utils" }
+k256 = { version = "0.7.3", default-features = false, features = ["ecdsa", "zeroize", "keccak256"] }
 
 [[bin]]
 name = "integration-tests"

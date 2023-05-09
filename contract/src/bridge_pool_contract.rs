@@ -142,9 +142,9 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
         token_address: String,
         payee: String,
         amount: U256,
+        chain_id: u64,
         salt: String,
         signature: String,
-        message_hash: String,
     ) -> Result<(), Error> {
         let actor = detail::get_immediate_caller_address()
             .unwrap_or_revert_with(Error::ImmediateCallerFail);
@@ -159,15 +159,15 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
         let signature_vec = hex::decode(signature).unwrap();
 
         let bridge_pool_instance = BridgePool::instance();
-        bridge_pool_instance.withdraw_signed(
+        let signer = bridge_pool_instance.withdraw_signed(
             token,
-            actor,
+            payee.clone(),
             amount,
+            chain_id,
             salt_array,
             signature_vec,
-            message_hash,
+            actor,
         )?;
-        let signer = payee.clone();
         self.emit(BridgePoolEvent::TransferBySignature {
             signer,
             receiver: payee,
@@ -192,6 +192,13 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
     fn remove_signer(&mut self, signer: String) {
         let bridge_pool_instance = BridgePool::instance();
         bridge_pool_instance.remove_signer(signer)
+    }
+
+    // outer function to add signer
+    fn check_signer(&mut self, signer: String) -> Result<bool, Error> {
+        let bridge_pool_instance = BridgePool::instance();
+        let res = bridge_pool_instance.check_signer(signer)?;
+        Ok(res)
     }
 }
 

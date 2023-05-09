@@ -33,6 +33,7 @@ const ENTRY_POINT_WITHDRAW_SIGNED: &str = "withdraw_signed";
 const ENTRY_POINT_ADD_SIGNER: &str = "add_signer";
 const ENTRY_POINT_REMOVE_SIGNER: &str = "remove_signer";
 const ENTRY_POINT_CONSTRUCTOR: &str = "constructor";
+const ENTRY_POINT_CHECK_SIGNER: &str = "check_signer";
 
 const CONTRACT_VERSION_KEY: &str = "version";
 const CONTRACT_KEY: &str = "bridge_pool";
@@ -49,7 +50,7 @@ const TOKEN_NAME: &str = "token_name";
 const PAYEE: &str = "payee";
 const SALT: &str = "salt";
 const SIGNATURE: &str = "signature";
-const MESSAGE_HASH: &str = "message_hash";
+const CHAIN_ID: &str = "chain_id";
 
 const CONSTRUCTOR_GROUP: &str = "constructor_group";
 const ADMIN_GROUP: &str = "admin_group";
@@ -150,12 +151,12 @@ pub extern "C" fn withdraw_signed() {
     let token_address = runtime::get_named_arg::<String>(TOKEN_ADDRESS);
     let payee = runtime::get_named_arg::<String>(PAYEE);
     let amount = runtime::get_named_arg::<U256>(AMOUNT);
+    let chain_id = runtime::get_named_arg::<u64>("chain_id");
     let salt = runtime::get_named_arg::<String>(SALT);
     let signature = runtime::get_named_arg::<String>(SIGNATURE);
-    let message_hash = runtime::get_named_arg::<String>(MESSAGE_HASH);
     #[allow(clippy::let_unit_value)]
     let ret = Contract::default()
-        .withdraw_signed(token_address, payee, amount, salt, signature, message_hash)
+        .withdraw_signed(token_address, payee, amount, chain_id, salt, signature)
         .unwrap_or_revert();
     runtime::ret(CLValue::from_t(ret).unwrap_or_revert());
 }
@@ -165,6 +166,14 @@ pub extern "C" fn add_signer() {
     let signer = runtime::get_named_arg::<String>(SIGNER);
     #[allow(clippy::let_unit_value)]
     let ret = Contract::default().add_signer(signer).unwrap_or_revert();
+    runtime::ret(CLValue::from_t(ret).unwrap_or_revert());
+}
+
+#[no_mangle]
+pub extern "C" fn check_signer() {
+    let signer = runtime::get_named_arg::<String>(SIGNER);
+    #[allow(clippy::let_unit_value)]
+    let ret = Contract::default().check_signer(signer).unwrap_or_revert();
     runtime::ret(CLValue::from_t(ret).unwrap_or_revert());
 }
 
@@ -253,8 +262,9 @@ pub extern "C" fn call() {
     bridge_pool_entry_points.add_entry_point(EntryPoint::new(
         ENTRY_POINT_WITHDRAW_SIGNED,
         vec![
-            Parameter::new(TOKEN_ADDRESS, String::cl_type()),
             Parameter::new(PAYEE, String::cl_type()),
+            Parameter::new(CHAIN_ID, u64::cl_type()),
+            Parameter::new(TOKEN_ADDRESS, String::cl_type()),
             Parameter::new(AMOUNT, U256::cl_type()),
             Parameter::new(SALT, String::cl_type()),
             Parameter::new(SIGNATURE, String::cl_type()),
@@ -276,6 +286,14 @@ pub extern "C" fn call() {
         ENTRY_POINT_REMOVE_SIGNER,
         vec![Parameter::new(SIGNER, String::cl_type())],
         CLType::Unit,
+        EntryPointAccess::Groups(vec![admin_group.clone()]),
+        EntryPointType::Contract,
+    ));
+
+    bridge_pool_entry_points.add_entry_point(EntryPoint::new(
+        ENTRY_POINT_CHECK_SIGNER,
+        vec![Parameter::new(SIGNER, String::cl_type())],
+        CLType::Bool,
         EntryPointAccess::Groups(vec![admin_group]),
         EntryPointType::Contract,
     ));

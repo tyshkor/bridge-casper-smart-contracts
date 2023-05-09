@@ -235,17 +235,33 @@ impl BridgePool {
         self.signers_dict.remove::<bool>(&signer)
     }
 
+    pub fn check_signer(&self, signer: String) -> Result<bool, Error> {
+        let res = self
+            .signers_dict
+            .get::<bool>(&signer)
+            .ok_or(Error::NoValueInSignersDict)?;
+        Ok(res)
+    }
+
     // withdraw liquidity from pool securely
+    #[allow(clippy::too_many_arguments)]
     pub fn withdraw_signed(
         &self,
         token_contract_package_hash: ContractPackageHash,
-        payee: Address,
+        payee: String,
         amount: U256,
-        _salt: [u8; 32],
+        chain_id: u64,
+        salt: [u8; 32],
         signature: alloc::vec::Vec<u8>,
-        message_hash: String,
-    ) -> Result<(), Error> {
-        let payee_string = payee.as_account_hash().unwrap().to_string();
+        actor: Address,
+    ) -> Result<String, Error> {
+        let message_hash = contract_utils::keccak::message_hash(
+            token_contract_package_hash.to_formatted_string(),
+            payee,
+            amount.to_string(),
+            chain_id as i64,
+            salt,
+        );
         let signer = self.signer_unique(message_hash, signature)?;
         let signer_string = hex::encode(signer);
 
@@ -256,14 +272,14 @@ impl BridgePool {
         {
             return Err(Error::InvalidSigner);
         }
-        self.pay_from_me(token_contract_package_hash, payee, amount);
+        self.pay_from_me(token_contract_package_hash, actor, amount);
         self.remove_liquidity_generic(
             token_contract_package_hash.to_string(),
-            payee_string,
+            actor.as_account_hash().unwrap().to_string(),
             amount,
-            self.get_dict(payee)?,
+            self.get_dict(actor)?,
         )?;
-        Ok(())
+        Ok(signer_string)
     }
 
     // function to build signed message
@@ -296,9 +312,7 @@ impl BridgePool {
         signature: alloc::vec::Vec<u8>,
     ) -> Result<Vec<u8>, Error> {
         let signature_rec = if signature.len() == 65 {
-            let mut signature_vec: Vec<u8> = signature;
-            signature_vec[64] -= 27;
-            RecoverableSignature::from_bytes(&signature_vec[..])
+            RecoverableSignature::from_bytes(&signature[..])
                 .map_err(|_| Error::RecoverableSignatureTryFromFail)?
         } else {
             NonRecoverableSignature::from_bytes(&signature[..])
