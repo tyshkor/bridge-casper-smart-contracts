@@ -49,7 +49,7 @@ const TOKEN_NAME: &str = "token_name";
 const PAYEE: &str = "payee";
 const SALT: &str = "salt";
 const SIGNATURE: &str = "signature";
-const MESSAGE_HASH: &str = "message_hash";
+const CHAIN_ID: &str = "chain_id";
 
 const CONSTRUCTOR_GROUP: &str = "constructor_group";
 const ADMIN_GROUP: &str = "admin_group";
@@ -253,19 +253,21 @@ pub extern "C" fn call() {
     bridge_pool_entry_points.add_entry_point(EntryPoint::new(
         ENTRY_POINT_WITHDRAW_SIGNED,
         vec![
-            Parameter::new("payee", String::cl_type()),
-            Parameter::new("chain_id", u64::cl_type()),
+            Parameter::new(PAYEE, String::cl_type()),
+            Parameter::new(CHAIN_ID, u64::cl_type()),
             Parameter::new(TOKEN_ADDRESS, String::cl_type()),
             Parameter::new(AMOUNT, U256::cl_type()),
             Parameter::new(SALT, String::cl_type()),
             Parameter::new(SIGNATURE, String::cl_type()),
         ],
         CLType::Unit,
+        EntryPointAccess::Public,
         EntryPointType::Contract,
     ));
 
     bridge_pool_entry_points.add_entry_point(EntryPoint::new(
         ENTRY_POINT_ADD_SIGNER,
+        vec![Parameter::new(SIGNER, String::cl_type())],
         CLType::Unit,
         EntryPointAccess::Groups(vec![admin_group.clone()]),
         EntryPointType::Contract,
