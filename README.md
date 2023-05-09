@@ -7,7 +7,6 @@ This contract has the following functionality:
 
 - add liquidity to the pool
 - remove liquidity from the pool
-- withdraw liquidity from the pool
 - withraw signed liquidity from the pool securely
 - swap with another network
 - get liquidity already in the pool
@@ -152,6 +151,18 @@ casper-client put-deploy \
     --session-arg "signer:string='<signer>'"
 ```
 
+##### Example remove_signer
+```bash
+casper-client put-deploy \
+    --chain-name casper-test \
+    --node-address http://44.208.234.65:7777 \
+    --secret-key <path-to-key> \
+    --session-hash hash-2eaf3bf2cbc8e46f56ce04904592aa530141170fbee3473baeba4edfe9e87513 \
+    --session-entry-point add_signer \
+    --payment-amount 5000000000 \
+    --session-arg "signer:string='<signer>'"
+```
+
 ##### Example withdraw_signed
 ```bash
 casper-client put-deploy \
@@ -169,18 +180,6 @@ casper-client put-deploy \
     --session-arg "message_hash:string='<message_hash>'"
 ```
 
-##### Example Withdraw
-```bash
-casper-client put-deploy \
-    --chain-name casper-test \
-    --node-address http://44.208.234.65:7777 \
-    --secret-key <path-to-key> \
-    --session-hash hash-2eaf3bf2cbc8e46f56ce04904592aa530141170fbee3473baeba4edfe9e87513 \
-    --session-entry-point withdraw \
-    --payment-amount 5000000000 \
-    --session-arg "amount:u256='1'" \
-    --session-arg "token_address:string='contract-package-wasme<token_address>'"
-```
 
 ## Events
 
@@ -189,7 +188,7 @@ casper-client put-deploy \
 | BridgeLiquidityAdded      | actor (Key) , token (Key), amount (U256)                                                                      |
 | BridgeLiquidityRemoved    | actor (Key) , token (Key), amount (U256)                                                                      |
 | BridgeSwap                | actor (Key) , token (Key), target_network: U256, target_token (String) , target_address (Key) , amount (U256) |
-| TransferBySignature       | signer (Key), reciever (String), token (Key) , amount (U256)                                                  |
+| TransferBySignature       | signer (Key), receiver (String), token (Key) , amount (U256)                                                  |
 
 
 ## Error Codes
@@ -215,8 +214,8 @@ casper-client put-deploy \
 | 17   | DictTargetTokenNotEqualTargetToken                  |
 | 18   | NoTargetNetworkDictForThisToken                     |
 | 19   | NoTargetTokenInAllowedTargetsDict                   |
-| 20   | ClientDoesNotHaveAnyKindOfLioquidity                |
-| 21   | ClientDoesNotHaveSpecificKindOfLioquidity           |
+| 20   | ClientDoesNotHaveAnyKindOfLiquidity                |
+| 21   | ClientDoesNotHaveSpecificKindOfLiquidity           |
 | 22   | AlreadyInThisTargetTokenDict                        |
 | 23   | MessageAlreadyUsed                                  |
 | 24   | NoValueInSignersDict                                |
@@ -235,6 +234,8 @@ casper-client put-deploy \
 | 37   | EcdsaPublicKeyRecoveryFail                          |
 | 38   | MessageHashHexDecodingFail                          |
 | 39   | PublicKeyTryIntoFail                                |
+| 40   | ImmediateCallerFail                                 |
+| 41   | SignerWrongFormat                                   |
 
 ## Contributing
 

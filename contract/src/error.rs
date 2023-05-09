@@ -22,8 +22,8 @@ pub enum Error {
     DictTargetTokenNotEqualTargetToken = 17,
     NoTargetNetworkDictForThisToken = 18,
     NoTargetTokenInAllowedTargetsDict = 19,
-    ClientDoesNotHaveAnyKindOfLioquidity = 20,
-    ClientDoesNotHaveSpecificKindOfLioquidity = 21,
+    ClientDoesNotHaveAnyKindOfLiquidity = 20,
+    ClientDoesNotHaveSpecificKindOfLiquidity = 21,
     AlreadyInThisTargetTokenDict = 22,
     MessageAlreadyUsed = 23,
     NoValueInSignersDict = 24,
@@ -42,6 +42,8 @@ pub enum Error {
     EcdsaPublicKeyRecoveryFail = 37,
     MessageHashHexDecodingFail = 38,
     PublicKeyTryIntoFail = 39,
+    ImmediateCallerFail = 40,
+    SignerWrongFormat = 41,
 }
 
 impl From<Error> for ApiError {
