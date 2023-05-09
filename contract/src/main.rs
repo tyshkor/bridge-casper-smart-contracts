@@ -294,7 +294,7 @@ pub extern "C" fn call() {
         ENTRY_POINT_CHECK_SIGNER,
         vec![Parameter::new(SIGNER, String::cl_type())],
         CLType::Bool,
-        EntryPointAccess::Groups(vec![admin_group.clone()]),
+        EntryPointAccess::Groups(vec![admin_group]),
         EntryPointType::Contract,
     ));
 

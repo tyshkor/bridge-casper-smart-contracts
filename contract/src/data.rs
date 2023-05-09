@@ -236,13 +236,15 @@ impl BridgePool {
     }
 
     pub fn check_signer(&self, signer: String) -> Result<bool, Error> {
-        Ok(self
+        let res = self
             .signers_dict
             .get::<bool>(&signer)
-            .ok_or(Error::NoValueInSignersDict)?)
+            .ok_or(Error::NoValueInSignersDict)?;
+        Ok(res)
     }
 
     // withdraw liquidity from pool securely
+    #[allow(clippy::too_many_arguments)]
     pub fn withdraw_signed(
         &self,
         token_contract_package_hash: ContractPackageHash,
@@ -255,7 +257,7 @@ impl BridgePool {
     ) -> Result<String, Error> {
         let message_hash = contract_utils::keccak::message_hash(
             token_contract_package_hash.to_formatted_string(),
-            payee.clone(),
+            payee,
             amount.to_string(),
             chain_id as i64,
             salt,
@@ -310,9 +312,7 @@ impl BridgePool {
         signature: alloc::vec::Vec<u8>,
     ) -> Result<Vec<u8>, Error> {
         let signature_rec = if signature.len() == 65 {
-            let mut signature_vec: Vec<u8> = signature;
-            // signature_vec[64] -= 27;
-            RecoverableSignature::from_bytes(&signature_vec[..])
+            RecoverableSignature::from_bytes(&signature[..])
                 .map_err(|_| Error::RecoverableSignatureTryFromFail)?
         } else {
             NonRecoverableSignature::from_bytes(&signature[..])

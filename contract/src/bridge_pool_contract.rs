@@ -197,7 +197,8 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
     // outer function to add signer
     fn check_signer(&mut self, signer: String) -> Result<bool, Error> {
         let bridge_pool_instance = BridgePool::instance();
-        Ok(bridge_pool_instance.check_signer(signer)?)
+        let res = bridge_pool_instance.check_signer(signer)?;
+        Ok(res)
     }
 }
 
