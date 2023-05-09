@@ -130,12 +130,12 @@ pub extern "C" fn withdraw_signed() {
     let token_address = runtime::get_named_arg::<String>("token_address");
     let payee = runtime::get_named_arg::<String>("payee");
     let amount = runtime::get_named_arg::<U256>("amount");
+    let chain_id = runtime::get_named_arg::<u64>("chain_id");
     let salt = runtime::get_named_arg::<String>("salt");
     let signature = runtime::get_named_arg::<String>("signature");
-    let message_hash = runtime::get_named_arg::<String>("message_hash");
     #[allow(clippy::let_unit_value)]
     let ret = Contract::default()
-        .withdraw_signed(token_address, payee, amount, salt, signature, message_hash)
+        .withdraw_signed(token_address, payee, amount, chain_id, salt, signature)
         .unwrap_or_revert();
     runtime::ret(CLValue::from_t(ret).unwrap_or_revert());
 }
@@ -237,6 +237,7 @@ pub extern "C" fn call() {
             Parameter::new("token_address", String::cl_type()),
             Parameter::new("payee", String::cl_type()),
             Parameter::new("amount", U256::cl_type()),
+            Parameter::new("chain_id", u64::cl_type()),
             Parameter::new("salt", String::cl_type()),
             Parameter::new("signature", String::cl_type()),
         ],

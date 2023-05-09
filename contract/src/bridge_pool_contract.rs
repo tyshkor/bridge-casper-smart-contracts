@@ -148,9 +148,9 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
         token_address: String,
         payee: String,
         amount: U256,
+        chain_id: u64,
         salt: String,
         signature: String,
-        message_hash: String,
     ) -> Result<(), Error> {
         let actor =
             detail::get_immediate_caller_address().unwrap_or_revert_with(Error::NegativeReward);
@@ -169,9 +169,9 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
             token,
             actor,
             amount,
+            chain_id,
             salt_array,
             signature_vec,
-            message_hash,
         )?;
         self.emit(BridgePoolEvent::TransferBySignature {
             signer: actor,

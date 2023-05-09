@@ -155,6 +155,7 @@ version = "0.1.0"
 dependencies = [
  "casper-contract",
  "casper-types",
+ "ecdsa",
  "hex",
  "k256",
  "secp256k1",

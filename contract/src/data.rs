@@ -244,11 +244,18 @@ impl BrigdePool {
         token_contract_package_hash: ContractPackageHash,
         payee: Address,
         amount: U256,
-        _salt: [u8; 32],
+        chain_id: u64,
+        salt: [u8; 32],
         signature: alloc::vec::Vec<u8>,
-        message_hash: String,
     ) -> Result<(), Error> {
         let payee_string = payee.as_account_hash().unwrap().to_string();
+        let message_hash = contract_utils::keccak::message_hash(
+            token_contract_package_hash.to_formatted_string(),
+            payee_string.clone(),
+            amount.to_string(),
+            chain_id as i64,
+            salt,
+        );
         let signer = self.signer_unique(message_hash, signature)?;
         let signer_string = hex::encode(signer);
 
@@ -305,7 +312,7 @@ impl BrigdePool {
     ) -> Result<Vec<u8>, Error> {
         let signature_rec = if signature.len() == 65 {
             let mut signature_vec: Vec<u8> = signature;
-            signature_vec[64] -= 27;
+            // signature_vec[64] -= 27;
             RecoverableSignature::from_bytes(&signature_vec[..])
                 .map_err(|_| Error::RecoverableSignatureTryFromFail)?
         } else {
