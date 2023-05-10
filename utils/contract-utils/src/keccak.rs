@@ -1,6 +1,9 @@
+use core::convert::TryInto;
+
+use secp256k1::{Message, Secp256k1, SecretKey};
 use tiny_keccak::{Hasher, Keccak};
-use k256::ecdsa::recoverable::{Signature as RecoverableSignature};
-use alloc::vec::Vec;
+use k256::{ecdsa::recoverable::{Signature as RecoverableSignature}};
+use alloc::{vec::Vec, string::String};
 
 pub fn keccak256(data: &[u8]) -> [u8; 32] {
     let mut hasher = Keccak::v256();
@@ -45,4 +48,52 @@ pub fn keccak256_hash(bytes: &[u8]) -> Vec<u8> {
     let mut resp: [u8; 32] = Default::default();
     hasher.finalize(&mut resp);
     resp.iter().cloned().collect()
+}
+
+pub fn message_hash(
+    token_contract_package_hash: String,
+    payee: String,
+    amount: String,
+    chain_id: i64,
+    salt: [u8; 32],
+) -> String {
+    let contract_package_hash_bytes = token_contract_package_hash.as_bytes();
+    let payee_bytes = payee.as_bytes();
+    let amount_bytes = amount.as_bytes();
+
+    let concatenated: Vec<u8> = [
+        contract_package_hash_bytes,
+        payee_bytes,
+        amount_bytes,
+        &chain_id.to_be_bytes(),
+        &salt,
+    ]
+    .concat();
+    let data = &concatenated[..];
+    let pre = keccak256(data);
+
+    hex::encode(keccak256(&hex::encode(pre).as_bytes()))
+}
+
+pub fn ecdsa_sign(hash: &[u8], private_key: &[u8]) -> [u8; 65]  {
+    let s = Secp256k1::signing_only();
+    let msg = Message::from_slice(hash).unwrap();
+    let key = SecretKey::from_slice(private_key).unwrap();
+    let res = s.sign_recoverable(&msg, &key);
+    let (v, sig_bytes) = s.sign_recoverable(&msg, &key).serialize_compact();
+    let r = hex::encode(&sig_bytes[..32]);
+    let s = hex::encode(&sig_bytes[32..64]);
+
+    let mut vec = sig_bytes.to_vec();
+    vec.push(v.to_i32() as u8);
+
+    let slice = vec.as_slice();
+
+    let mut vec1 = sig_bytes[32..].to_vec();
+    let mut vec2 = sig_bytes[..32].to_vec();
+
+    vec1.append(&mut vec2);
+    vec1.push(v.to_i32() as u8);
+
+    vec1.try_into().unwrap()
 }
