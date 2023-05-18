@@ -8,7 +8,7 @@ mod tests {
 
     use casper_engine_test_support::{
         ExecuteRequestBuilder, InMemoryWasmTestBuilder, WasmTestBuilder, DEFAULT_ACCOUNT_ADDR,
-        PRODUCTION_RUN_GENESIS_REQUEST,
+        PRODUCTION_RUN_GENESIS_REQUEST, DEFAULT_RUN_GENESIS_REQUEST,
     };
     use casper_types::{runtime_args, ContractHash, RuntimeArgs};
 
@@ -925,7 +925,7 @@ mod tests {
     fn should_be_able_to_install_and_allow_target() {
         let mut builder = InMemoryWasmTestBuilder::default();
         builder
-            .run_genesis(&PRODUCTION_RUN_GENESIS_REQUEST)
+            .run_genesis(&DEFAULT_RUN_GENESIS_REQUEST)
             .commit();
 
         let erc20_runtime_args = runtime_args! {
