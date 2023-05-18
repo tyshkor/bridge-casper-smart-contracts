@@ -27,6 +27,6 @@ test = false
 
 [features]
 default = ["std"]
-std = ["casper-contract/std", "casper-types/std"]
+std = ["casper-contract/std"]
 
 # default = []
