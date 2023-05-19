@@ -207,24 +207,6 @@ impl BridgePool {
         }
     }
 
-    // withdraw liquidity from pool
-    pub fn withdraw(
-        &self,
-        token_contract_package_hash: ContractPackageHash,
-        client_address: Address,
-        amount: U256,
-    ) -> Result<(), Error> {
-        let client_string: String = TryInto::try_into(client_address)?;
-        self.pay_from_me(token_contract_package_hash, client_address, amount);
-        self.del_liquidity_generic_from_dict(
-            token_contract_package_hash.to_string(),
-            client_string,
-            amount,
-            self.get_dict(client_address)?,
-        )?;
-        Ok(())
-    }
-
     // function to add signer
     pub fn add_signer(&self, signer: String) {
         self.signers_dict.set(&signer, true)

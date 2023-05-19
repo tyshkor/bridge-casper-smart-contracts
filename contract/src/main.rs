@@ -151,7 +151,7 @@ pub extern "C" fn withdraw_signed() {
     let token_address = runtime::get_named_arg::<String>(TOKEN_ADDRESS);
     let payee = runtime::get_named_arg::<String>(PAYEE);
     let amount = runtime::get_named_arg::<U256>(AMOUNT);
-    let chain_id = runtime::get_named_arg::<u64>("chain_id");
+    let chain_id = runtime::get_named_arg::<u64>(CHAIN_ID);
     let salt = runtime::get_named_arg::<String>(SALT);
     let signature = runtime::get_named_arg::<String>(SIGNATURE);
     #[allow(clippy::let_unit_value)]
