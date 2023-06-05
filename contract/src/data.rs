@@ -244,15 +244,18 @@ impl BridgePool {
             .map_err(|_| Error::SaltWrongSize)?;
 
         let message_hash = hex::encode(keccak256(
-            &[
-                token_contract_package_hash.to_formatted_string().as_bytes(),
-                payee.as_bytes(),
-                amount.to_string().as_bytes(),
-                token_recipient.as_bytes(),
-                &chain_id.to_be_bytes(),
-                &salt,
-            ]
-            .concat()[..],
+            &hex::encode(keccak256(
+                &[
+                    token_contract_package_hash.to_formatted_string().as_bytes(),
+                    payee.as_bytes(),
+                    amount.to_string().as_bytes(),
+                    token_recipient.as_bytes(),
+                    &chain_id.to_be_bytes(),
+                    &salt,
+                ]
+                .concat()[..],
+            ))
+            .as_bytes(),
         ));
 
         let signature_rec = if signature.len() == 65 {

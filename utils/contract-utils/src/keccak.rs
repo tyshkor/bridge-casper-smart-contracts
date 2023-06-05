@@ -49,7 +49,7 @@ pub fn message_hash(
     token_recipient: String,
 ) -> String {
 
-    hex::encode(keccak256(&[
+    hex::encode(keccak256(&hex::encode(keccak256(&[
         token_contract_package_hash.as_bytes(),
         payee.as_bytes(),
         amount.as_bytes(),
@@ -57,7 +57,7 @@ pub fn message_hash(
         &chain_id.to_be_bytes(),
         &salt,
     ]
-    .concat()[..]))
+    .concat()[..])).as_bytes()))
 }
 
 pub fn ecdsa_sign(hash: &[u8], private_key: &[u8]) -> [u8; 65] {

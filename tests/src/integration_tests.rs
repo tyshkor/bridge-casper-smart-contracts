@@ -820,17 +820,17 @@ mod tests {
         )
         .build();
 
-        let salt_string = "6b166cc8016d4ddb7a2578245ac9de73bd95f30ea960ab53dec02141623832dd".to_string();
+        let salt_string =
+            "6b166cc8016d4ddb7a2578245ac9de73bd95f30ea960ab53dec02141623832dd".to_string();
         let chain_id = 1u64;
         let amount = U256::from(1i64);
         let payee = "0Bdb79846e8331A19A65430363f240Ec8aCC2A52".to_string();
         let token_recipient = "qwe".to_string();
 
-        let salt_array: [u8; 32] =
-            hex::decode(salt_string.clone())
-                .unwrap()
-                .try_into()
-                .unwrap();
+        let salt_array: [u8; 32] = hex::decode(salt_string.clone())
+            .unwrap()
+            .try_into()
+            .unwrap();
 
         let message_hash = contract_utils::keccak::message_hash(
             erc20_contract_package_hash_string.clone(),
