@@ -830,8 +830,9 @@ mod tests {
             erc20_contract_package_hash_string.clone(),
             "0Bdb79846e8331A19A65430363f240Ec8aCC2A52".to_string(),
             U256::from(1i64).to_string(),
-            1i64,
+            1u64,
             salt_array,
+            "qwe".to_string(),
         );
 
         let private_key_str = "a7a08a23f69090a53a32814da1d262c8d2728d16bce420ae143978d85a06be49";
@@ -862,6 +863,8 @@ mod tests {
         let signer_string = hex::encode(
             contract_utils::keccak::ecdsa_recover(&message_hash_bytes[..], &signature_rec).unwrap(),
         );
+
+        println!("signer_string is {}", signer_string);
 
         builder
             .exec(add_liquidity_request)
@@ -905,6 +908,7 @@ mod tests {
             "signature" => signature_string,
             "chain_id" => 1u64,
             "salt" => "6b166cc8016d4ddb7a2578245ac9de73bd95f30ea960ab53dec02141623832dd".to_string(),
+            "token_recipient" => "qwe".to_string(),
         };
 
         let withdraw_signed_request = ExecuteRequestBuilder::contract_call_by_hash(
@@ -1179,7 +1183,8 @@ mod tests {
 
         let swap_args = runtime_args! {
             "token_address" => erc20_contract_package_hash.to_formatted_string(),
-            "target_token" => "qwe".to_string() ,
+            "target_token" => "qwe".to_string(),
+            "target_address" => "qwe_addr".to_string(),
             "target_network" => U256::from(1i64),
             "amount" => U256::from(1i64),
         };
