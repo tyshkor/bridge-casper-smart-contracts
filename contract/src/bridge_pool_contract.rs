@@ -136,6 +136,7 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
     }
 
     // outer function to withdraw liquidity from the pool securely
+    #[allow(clippy::too_many_arguments)]
     fn withdraw_signed(
         &mut self,
         token_address: String,
