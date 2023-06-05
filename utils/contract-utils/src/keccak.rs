@@ -16,21 +16,23 @@ pub fn keccak256(data: &[u8]) -> [u8; 32] {
 }
 
 pub fn ecdsa_recover(hash: &[u8], sig: &RecoverableSignature) -> Result<Vec<u8>, secp256k1::Error> {
-    let s = secp256k1::Secp256k1::new();
-    let msg = secp256k1::Message::from_slice(hash).unwrap();
+    let s = Secp256k1::new();
+    let msg = Message::from_slice(hash).unwrap();
     let mut sig_compact: Vec<u8> = sig.r().to_bytes().to_vec().clone();
     sig_compact.extend(&sig.s().to_bytes().to_vec());
     let id_u8: u8 = From::from(sig.recovery_id().clone());
     let sig_v = secp256k1::recovery::RecoveryId::from_i32(id_u8 as i32).unwrap();
     let rec_sig = secp256k1::recovery::RecoverableSignature::from_compact(&sig_compact, sig_v);
     match rec_sig {
-        Ok(r) => match s.recover(&msg, &r) {
-            Ok(pub_key) => {
-                let pk_bytes_raw: [u8; 65] = pub_key.serialize_uncompressed();
-                Ok(public_to_address(&pk_bytes_raw[1..]))
+        Ok(r) => {
+            match s.recover(&msg, &r) {
+                Ok(pub_key) => {
+                    let pk_bytes_raw: [u8; 65] = pub_key.serialize_uncompressed();
+                    Ok(public_to_address(&pk_bytes_raw[1..]))
+                }
+                Err(e) => return Err(e),
             }
-            Err(e) => return Err(e),
-        },
+        }
         Err(e) => return Err(e),
     }
 }
