@@ -237,6 +237,7 @@ impl BridgePool {
         token_recipient: String,
         signature: alloc::vec::Vec<u8>,
         actor: Address,
+        hash: String,
     ) -> Result<String, Error> {
         let message_hash = contract_utils::keccak::message_hash(
             token_contract_package_hash.to_formatted_string(),
@@ -246,6 +247,9 @@ impl BridgePool {
             salt,
             token_recipient,
         );
+        if hash != message_hash {
+            return Err(Error::MessageHashNotEqualToGenerated);
+        }
         let signer = self.signer_unique(message_hash, signature)?;
         let signer_string = hex::encode(signer);
 
@@ -263,6 +267,33 @@ impl BridgePool {
             amount,
             self.get_dict(actor)?,
         )?;
+        Ok(signer_string)
+    }
+
+    pub fn signed_experiment(        
+        &self,
+        token_contract_package_hash: ContractPackageHash,
+        payee: String,
+        amount: U256,
+        chain_id: u64,
+        salt: [u8; 32],
+        token_recipient: String,
+        signature: alloc::vec::Vec<u8>,
+        actor: Address,
+        hash: String,
+    ) -> Result<String, Error> {
+        let signer = self.signer_unique(hash, signature)?;
+        let signer_string = hex::encode(signer);
+        Ok(signer_string)
+    }
+
+    pub fn signed_basic(        
+        &self,
+        signature: alloc::vec::Vec<u8>,
+        hash: String,
+    ) -> Result<String, Error> {
+        let signer = self.signer_unique(hash, signature)?;
+        let signer_string = hex::encode(signer);
         Ok(signer_string)
     }
 
@@ -320,6 +351,7 @@ impl BridgePool {
             self.used_hashes_dict.set(message_hash.as_str(), true);
         }
         Ok(public_key)
+        // Ok(alloc::vec![])
     }
 
     // function to swap tokens from different pools
