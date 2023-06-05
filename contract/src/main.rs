@@ -288,7 +288,6 @@ pub extern "C" fn call() {
             Parameter::new(SALT, String::cl_type()),
             Parameter::new(SIGNATURE, String::cl_type()),
             Parameter::new(TOKEN_RECIPIENT, String::cl_type()),
-            // Parameter::new("hash", String::cl_type()),
         ],
         CLType::Unit,
         EntryPointAccess::Public,
