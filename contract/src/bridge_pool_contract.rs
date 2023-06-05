@@ -213,24 +213,24 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
 
         let signer = hex::encode(public_key);
 
-        if !bridge_pool_instance
-            .signers_dict
-            .get::<bool>(&signer)
-            .ok_or(Error::NoValueInSignersDict)?
-        {
-            return Err(Error::InvalidSigner);
-        }
+        // if !bridge_pool_instance
+        //     .signers_dict
+        //     .get::<bool>(&signer)
+        //     .ok_or(Error::NoValueInSignersDict)?
+        // {
+        //     return Err(Error::InvalidSigner);
+        // }
 
-        let client_addr = actor;
-        runtime::call_versioned_contract::<()>(
-            token,
-            None,
-            "transfer",
-            runtime_args! {
-                "recipient" => client_addr,
-                AMOUNT => amount
-            },
-        );
+        // let client_addr = actor;
+        // runtime::call_versioned_contract::<()>(
+        //     token,
+        //     None,
+        //     "transfer",
+        //     runtime_args! {
+        //         "recipient" => client_addr,
+        //         AMOUNT => amount
+        //     },
+        // );
         // bridge_pool_instance.del_liquidity_generic_from_dict(
         //     token.to_formatted_string(),
         //     actor.as_account_hash().unwrap().to_string(),
