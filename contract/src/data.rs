@@ -583,6 +583,7 @@ pub fn emit(event: &BridgePoolEvent) {
             events.push(param);
         }
     };
+    
     for param in events {
         let _: URef = storage::new_uref(param);
     }
