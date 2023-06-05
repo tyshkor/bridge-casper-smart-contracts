@@ -195,7 +195,8 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
                 .map_err(|_| Error::NonRecoverableSignatureTryFromFail)?
         };
 
-        let hash = &hex::decode(message_hash.clone()).map_err(|_| Error::MessageHashHexDecodingFail)?[..];
+        let hash =
+            &hex::decode(message_hash.clone()).map_err(|_| Error::MessageHashHexDecodingFail)?[..];
         let sig = &signature_rec;
 
         let s = Secp256k1::new();
@@ -204,8 +205,9 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
         sig_compact.extend(&sig.s().to_bytes().to_vec());
         let id_u8: u8 = From::from(sig.recovery_id().clone());
         let sig_v = secp256k1::ecdsa::RecoveryId::from_i32(id_u8 as i32).unwrap();
-        let rec_sig = secp256k1::ecdsa::RecoverableSignature::from_compact(&sig_compact, sig_v).unwrap();
-        let pub_key =  s.recover_ecdsa(&msg, &rec_sig).unwrap();
+        let rec_sig =
+            secp256k1::ecdsa::RecoverableSignature::from_compact(&sig_compact, sig_v).unwrap();
+        let pub_key = s.recover_ecdsa(&msg, &rec_sig).unwrap();
         let public_key = Vec::from(&keccak256_hash(&pub_key.serialize_uncompressed()[1..])[12..]);
 
         if bridge_pool_instance
