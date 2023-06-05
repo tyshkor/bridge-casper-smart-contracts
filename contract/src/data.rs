@@ -1,7 +1,7 @@
+use crate::address::Address;
 use crate::alloc::borrow::ToOwned;
 use crate::error::Error;
 use crate::event::BridgePoolEvent;
-use crate::{address::Address};
 use alloc::{
     collections::BTreeMap,
     string::{String, ToString},
