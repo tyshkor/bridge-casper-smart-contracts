@@ -193,25 +193,25 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
                 .map_err(|_| Error::NonRecoverableSignatureTryFromFail)?
         };
 
-        let public_key = contract_utils::keccak::ecdsa_recover(
-            &hex::decode(message_hash.clone()).map_err(|_| Error::MessageHashHexDecodingFail)?[..],
-            &signature_rec,
-        )
-        .map_err(|_| Error::EcdsaPublicKeyRecoveryFail)?;
+        // let public_key = contract_utils::keccak::ecdsa_recover(
+        //     &hex::decode(message_hash.clone()).map_err(|_| Error::MessageHashHexDecodingFail)?[..],
+        //     &signature_rec,
+        // )
+        // .map_err(|_| Error::EcdsaPublicKeyRecoveryFail)?;
 
-        if bridge_pool_instance
-            .used_hashes_dict
-            .get::<bool>(message_hash.as_str())
-            .is_some()
-        {
-            return Err(Error::MessageAlreadyUsed);
-        } else {
-            bridge_pool_instance
-                .used_hashes_dict
-                .set(message_hash.as_str(), true);
-        }
+        // if bridge_pool_instance
+        //     .used_hashes_dict
+        //     .get::<bool>(message_hash.as_str())
+        //     .is_some()
+        // {
+        //     return Err(Error::MessageAlreadyUsed);
+        // } else {
+        //     bridge_pool_instance
+        //         .used_hashes_dict
+        //         .set(message_hash.as_str(), true);
+        // }
 
-        let signer = hex::encode(public_key);
+        // let signer = hex::encode(public_key);
 
         // if !bridge_pool_instance
         //     .signers_dict
@@ -237,12 +237,12 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
         //     amount,
         //     bridge_pool_instance.get_dict(actor)?,
         // )?;
-        self.emit(BridgePoolEvent::TransferBySignature {
-            signer,
-            receiver,
-            token,
-            amount,
-        });
+        // self.emit(BridgePoolEvent::TransferBySignature {
+        //     signer,
+        //     receiver,
+        //     token,
+        //     amount,
+        // });
         Ok(())
     }
 
