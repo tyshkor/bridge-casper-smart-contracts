@@ -55,9 +55,9 @@ pub struct BridgePool {
     allowed_targets_dict: Dict,
     // dictionary to track used hashes
     #[allow(unused)]
-    used_hashes_dict: Dict,
+    pub used_hashes_dict: Dict,
     // dictionary to track signers
-    signers_dict: Dict,
+    pub signers_dict: Dict,
     token_contract_package_hash_dict_name: Dict,
 }
 
@@ -183,7 +183,7 @@ impl BridgePool {
     }
 
     // generic function to handle the case of a client and a contract when removing liquidity
-    fn del_liquidity_generic_from_dict(
+    pub fn del_liquidity_generic_from_dict(
         &self,
         token_contract_hash: String,
         client: String,
@@ -496,7 +496,7 @@ impl BridgePool {
         runtime::call_versioned_contract::<()>(token, None, "transfer", args);
     }
 
-    fn get_dict(&self, client_address: Address) -> Result<&Dict, Error> {
+    pub fn get_dict(&self, client_address: Address) -> Result<&Dict, Error> {
         match client_address {
             Address::Account(_) => Ok(&self.account_hash_liquidities_dict),
             Address::ContractPackage(_) => Ok(&self.hash_addr_liquidities_dict),

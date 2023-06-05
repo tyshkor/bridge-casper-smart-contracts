@@ -4,10 +4,18 @@ use crate::{
     error::Error,
     event::BridgePoolEvent,
 };
-use alloc::string::String;
+use alloc::string::{String, ToString};
+use casper_contract::contract_api::runtime;
 use casper_contract::unwrap_or_revert::UnwrapOrRevert;
-use casper_types::{ContractPackageHash, U256};
+use casper_types::RuntimeArgs;
+use casper_types::{runtime_args, ContractPackageHash, U256};
+use contract_utils::keccak::keccak256;
 use contract_utils::{ContractContext, ContractStorage};
+use k256::ecdsa::{
+    recoverable::Signature as RecoverableSignature, signature::Signature as NonRecoverableSignature,
+};
+
+const AMOUNT: &str = "amount";
 
 pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage> {
     fn init(&mut self) {
@@ -154,15 +162,80 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
             .map_err(|_| Error::NotContractPackageHash)?;
 
         let bridge_pool_instance = BridgePool::instance();
-        let signer = bridge_pool_instance.withdraw_signed(
+
+        let signature = hex::decode(signature).unwrap();
+
+        let salt: [u8; 32] = hex::decode(salt)
+            .map_err(|_| Error::SaltHexFail)?
+            .try_into()
+            .map_err(|_| Error::SaltWrongSize)?;
+
+        let message_hash = hex::encode(keccak256(
+            hex::encode(keccak256(
+                &[
+                    token.to_formatted_string().as_bytes(),
+                    payee.as_bytes(),
+                    amount.to_string().as_bytes(),
+                    receiver.as_bytes(),
+                    &chain_id.to_be_bytes(),
+                    &salt,
+                ]
+                .concat()[..],
+            ))
+            .as_bytes(),
+        ));
+
+        let signature_rec = if signature.len() == 65 {
+            RecoverableSignature::from_bytes(&signature[..])
+                .map_err(|_| Error::RecoverableSignatureTryFromFail)?
+        } else {
+            NonRecoverableSignature::from_bytes(&signature[..])
+                .map_err(|_| Error::NonRecoverableSignatureTryFromFail)?
+        };
+
+        let public_key = contract_utils::keccak::ecdsa_recover(
+            &hex::decode(message_hash.clone()).map_err(|_| Error::MessageHashHexDecodingFail)?[..],
+            &signature_rec,
+        )
+        .map_err(|_| Error::EcdsaPublicKeyRecoveryFail)?;
+
+        if bridge_pool_instance
+            .used_hashes_dict
+            .get::<bool>(message_hash.as_str())
+            .is_some()
+        {
+            return Err(Error::MessageAlreadyUsed);
+        } else {
+            bridge_pool_instance
+                .used_hashes_dict
+                .set(message_hash.as_str(), true);
+        }
+
+        let signer = hex::encode(public_key);
+
+        if !bridge_pool_instance
+            .signers_dict
+            .get::<bool>(&signer)
+            .ok_or(Error::NoValueInSignersDict)?
+        {
+            return Err(Error::InvalidSigner);
+        }
+
+        let client_addr = actor;
+        runtime::call_versioned_contract::<()>(
             token,
-            payee,
+            None,
+            "transfer",
+            runtime_args! {
+                "recipient" => client_addr,
+                AMOUNT => amount
+            },
+        );
+        bridge_pool_instance.del_liquidity_generic_from_dict(
+            token.to_formatted_string(),
+            actor.as_account_hash().unwrap().to_string(),
             amount,
-            chain_id,
-            salt,
-            receiver.clone(),
-            hex::decode(signature).unwrap(),
-            actor,
+            bridge_pool_instance.get_dict(actor)?,
         )?;
         self.emit(BridgePoolEvent::TransferBySignature {
             signer,
