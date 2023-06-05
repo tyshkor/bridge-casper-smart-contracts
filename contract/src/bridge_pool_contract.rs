@@ -5,15 +5,17 @@ use crate::{
     event::BridgePoolEvent,
 };
 use alloc::string::{String, ToString};
+use alloc::vec::Vec;
 use casper_contract::contract_api::runtime;
 use casper_contract::unwrap_or_revert::UnwrapOrRevert;
 use casper_types::RuntimeArgs;
 use casper_types::{runtime_args, ContractPackageHash, U256};
-use contract_utils::keccak::keccak256;
+use contract_utils::keccak::{keccak256, keccak256_hash};
 use contract_utils::{ContractContext, ContractStorage};
 use k256::ecdsa::{
     recoverable::Signature as RecoverableSignature, signature::Signature as NonRecoverableSignature,
 };
+use secp256k1::{Message, Secp256k1, SecretKey};
 
 const AMOUNT: &str = "amount";
 
@@ -193,11 +195,18 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
                 .map_err(|_| Error::NonRecoverableSignatureTryFromFail)?
         };
 
-        let public_key = contract_utils::keccak::ecdsa_recover(
-            &hex::decode(message_hash.clone()).map_err(|_| Error::MessageHashHexDecodingFail)?[..],
-            &signature_rec,
-        )
-        .map_err(|_| Error::EcdsaPublicKeyRecoveryFail)?;
+        let hash = &hex::decode(message_hash.clone()).map_err(|_| Error::MessageHashHexDecodingFail)?[..];
+        let sig = &signature_rec;
+
+        let s = Secp256k1::new();
+        let msg = Message::from_slice(hash).unwrap();
+        let mut sig_compact: Vec<u8> = sig.r().to_bytes().to_vec().clone();
+        sig_compact.extend(&sig.s().to_bytes().to_vec());
+        let id_u8: u8 = From::from(sig.recovery_id().clone());
+        let sig_v = secp256k1::ecdsa::RecoveryId::from_i32(id_u8 as i32).unwrap();
+        let rec_sig = secp256k1::ecdsa::RecoverableSignature::from_compact(&sig_compact, sig_v).unwrap();
+        let pub_key =  s.recover_ecdsa(&msg, &rec_sig).unwrap();
+        let public_key = Vec::from(&keccak256_hash(&pub_key.serialize_uncompressed()[1..])[12..]);
 
         // if bridge_pool_instance
         //     .used_hashes_dict
