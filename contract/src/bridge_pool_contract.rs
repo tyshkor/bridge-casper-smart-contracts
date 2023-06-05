@@ -98,6 +98,7 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
         amount: U256,
         target_network: U256,
         target_token: String,
+        target_address: String,
     ) -> Result<(), Error> {
         let actor = detail::get_immediate_caller_address()
             .unwrap_or_revert_with(Error::ImmediateCallerFail);
@@ -107,8 +108,6 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
 
         let bridge_pool_instance = BridgePool::instance();
         bridge_pool_instance.swap(actor, token, target_token.clone(), amount, target_network)?;
-
-        let target_address = target_token;
 
         self.emit(BridgePoolEvent::BridgeSwap {
             actor,
@@ -144,6 +143,7 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
         amount: U256,
         chain_id: u64,
         salt: String,
+        receiver: String,
         signature: String,
     ) -> Result<(), Error> {
         let actor = detail::get_immediate_caller_address()
@@ -165,12 +165,13 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
             amount,
             chain_id,
             salt_array,
+            receiver.clone(),
             signature_vec,
             actor,
         )?;
         self.emit(BridgePoolEvent::TransferBySignature {
             signer,
-            receiver: payee,
+            receiver,
             token,
             amount,
         });
