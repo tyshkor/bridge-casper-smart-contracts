@@ -234,6 +234,7 @@ impl BridgePool {
         amount: U256,
         chain_id: u64,
         salt: [u8; 32],
+        token_recipient: String,
         signature: alloc::vec::Vec<u8>,
         actor: Address,
     ) -> Result<String, Error> {
@@ -241,8 +242,9 @@ impl BridgePool {
             token_contract_package_hash.to_formatted_string(),
             payee,
             amount.to_string(),
-            chain_id as i64,
+            chain_id,
             salt,
+            token_recipient,
         );
         let signer = self.signer_unique(message_hash, signature)?;
         let signer_string = hex::encode(signer);
