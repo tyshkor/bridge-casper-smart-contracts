@@ -193,11 +193,11 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
                 .map_err(|_| Error::NonRecoverableSignatureTryFromFail)?
         };
 
-        // let public_key = contract_utils::keccak::ecdsa_recover(
-        //     &hex::decode(message_hash.clone()).map_err(|_| Error::MessageHashHexDecodingFail)?[..],
-        //     &signature_rec,
-        // )
-        // .map_err(|_| Error::EcdsaPublicKeyRecoveryFail)?;
+        let public_key = contract_utils::keccak::ecdsa_recover(
+            &hex::decode(message_hash.clone()).map_err(|_| Error::MessageHashHexDecodingFail)?[..],
+            &signature_rec,
+        )
+        .map_err(|_| Error::EcdsaPublicKeyRecoveryFail)?;
 
         // if bridge_pool_instance
         //     .used_hashes_dict
