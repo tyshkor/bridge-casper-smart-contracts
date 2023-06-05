@@ -24,8 +24,7 @@ pub fn ecdsa_recover(hash: &[u8], sig: &RecoverableSignature) -> Result<Vec<u8>,
     let sig_v = secp256k1::ecdsa::RecoveryId::from_i32(id_u8 as i32).unwrap();
     let rec_sig = secp256k1::ecdsa::RecoverableSignature::from_compact(&sig_compact, sig_v)?;
     let pub_key =  s.recover_ecdsa(&msg, &rec_sig)?;
-    let pk_bytes_raw: [u8; 65] = pub_key.serialize_uncompressed();
-    Ok(public_to_address(&pk_bytes_raw[1..]))
+    Ok(Vec::from(&keccak256_hash(&pub_key.serialize_uncompressed()[1..])[12..]))
 }
 
 pub fn public_to_address(public: &[u8]) -> Vec<u8> {
@@ -49,25 +48,16 @@ pub fn message_hash(
     salt: [u8; 32],
     token_recipient: String,
 ) -> String {
-    let contract_package_hash_bytes = token_contract_package_hash.as_bytes();
-    let payee_bytes = payee.as_bytes();
-    let amount_bytes = amount.as_bytes();
 
-    let token_recipient_bytes = token_recipient.as_bytes();
-
-    let concatenated: Vec<u8> = [
-        contract_package_hash_bytes,
-        payee_bytes,
-        amount_bytes,
-        token_recipient_bytes,
+    hex::encode(keccak256(&[
+        token_contract_package_hash.as_bytes(),
+        payee.as_bytes(),
+        amount.as_bytes(),
+        token_recipient.as_bytes(),
         &chain_id.to_be_bytes(),
         &salt,
     ]
-    .concat();
-    let data = &concatenated[..];
-    let pre = keccak256(data);
-
-    hex::encode(keccak256(&hex::encode(pre).as_bytes()))
+    .concat()[..]))
 }
 
 pub fn ecdsa_sign(hash: &[u8], private_key: &[u8]) -> [u8; 65] {

@@ -145,19 +145,12 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
         salt: String,
         receiver: String,
         signature: String,
-        hash: String,
     ) -> Result<(), Error> {
         let actor = detail::get_immediate_caller_address()
             .unwrap_or_revert_with(Error::ImmediateCallerFail);
 
         let token = ContractPackageHash::from_formatted_str(token_address.as_str())
             .map_err(|_| Error::NotContractPackageHash)?;
-
-        let salt_array: [u8; 32] = hex::decode(salt)
-            .map_err(|_| Error::SaltHexFail)?
-            .try_into()
-            .map_err(|_| Error::SaltWrongSize)?;
-        let signature_vec = hex::decode(signature).unwrap();
 
         let bridge_pool_instance = BridgePool::instance();
         let signer = bridge_pool_instance.withdraw_signed(
@@ -165,11 +158,10 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
             payee.clone(),
             amount,
             chain_id,
-            salt_array,
+            salt,
             receiver.clone(),
-            signature_vec,
+            hex::decode(signature).unwrap(),
             actor,
-            hash,
         )?;
         self.emit(BridgePoolEvent::TransferBySignature {
             signer,
@@ -177,65 +169,6 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
             token,
             amount,
         });
-        Ok(())
-    }
-
-    fn signed_experiment(&mut self,
-        token_address: String,
-        payee: String,
-        amount: U256,
-        chain_id: u64,
-        salt: String,
-        receiver: String,
-        signature: String,
-        hash: String,
-    ) -> Result<(), Error> {
-        let actor = detail::get_immediate_caller_address()
-            .unwrap_or_revert_with(Error::ImmediateCallerFail);
-        let token = ContractPackageHash::from_formatted_str(token_address.as_str())
-            .map_err(|_| Error::NotContractPackageHash)?;
-
-            let salt_array: [u8; 32] = hex::decode(salt)
-            .map_err(|_| Error::SaltHexFail)?
-            .try_into()
-            .map_err(|_| Error::SaltWrongSize)?;
-
-        let signature_vec = hex::decode(signature).unwrap();
-        let bridge_pool_instance = BridgePool::instance();
-        let _ = bridge_pool_instance.signed_experiment(
-            token,
-            payee.clone(),
-            amount,
-            chain_id,
-            salt_array,
-            receiver.clone(),
-            signature_vec,
-            actor,
-            hash,
-        )?;
-        Ok(())
-    }
-
-    fn signed_basic(&mut self,
-        signature: String,
-        hash: String,
-    ) -> Result<(), Error> {
-        let actor = detail::get_immediate_caller_address()
-            .unwrap_or_revert_with(Error::ImmediateCallerFail);
-
-
-            let salt_array: [u8; 32] = hex::decode("6b166cc8016d4ddb7a2578245ac9de73bd95f30ea960ab53dec02141623832dd")
-            .map_err(|_| Error::SaltHexFail)?
-            .try_into()
-            .map_err(|_| Error::SaltWrongSize)?;
-
-
-        let signature_vec = hex::decode(signature).unwrap();
-        let bridge_pool_instance = BridgePool::instance();
-        let _ = bridge_pool_instance.signed_basic(
-            signature_vec,
-            hash,
-        )?;
         Ok(())
     }
 

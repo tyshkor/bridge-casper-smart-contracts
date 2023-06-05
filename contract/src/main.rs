@@ -131,7 +131,13 @@ pub extern "C" fn swap() {
     let target_address = runtime::get_named_arg::<String>(TARGET_ADDRESS);
     #[allow(clippy::let_unit_value)]
     let ret = Contract::default()
-        .swap(token_address, amount, target_network, target_token, target_address)
+        .swap(
+            token_address,
+            amount,
+            target_network,
+            target_token,
+            target_address,
+        )
         .unwrap_or_revert();
     runtime::ret(CLValue::from_t(ret).unwrap_or_revert());
 }
@@ -158,38 +164,17 @@ pub extern "C" fn withdraw_signed() {
     let salt = runtime::get_named_arg::<String>(SALT);
     let signature = runtime::get_named_arg::<String>(SIGNATURE);
     let token_recipient = runtime::get_named_arg::<String>(TOKEN_RECIPIENT);
-    let hash = runtime::get_named_arg::<String>("hash");
     #[allow(clippy::let_unit_value)]
     let ret = Contract::default()
-        .withdraw_signed(token_address, payee, amount, chain_id, salt, token_recipient, signature, hash)
-        .unwrap_or_revert();
-    runtime::ret(CLValue::from_t(ret).unwrap_or_revert());
-}
-
-#[no_mangle]
-pub extern "C" fn signed_experiment() {
-    let token_address = runtime::get_named_arg::<String>(TOKEN_ADDRESS);
-    let payee = runtime::get_named_arg::<String>(PAYEE);
-    let amount = runtime::get_named_arg::<U256>(AMOUNT);
-    let chain_id = runtime::get_named_arg::<u64>(CHAIN_ID);
-    let salt = runtime::get_named_arg::<String>(SALT);
-    let token_recipient = runtime::get_named_arg::<String>(TOKEN_RECIPIENT);
-    let hash = runtime::get_named_arg::<String>("hash");
-    let signature = runtime::get_named_arg::<String>(SIGNATURE);
-    #[allow(clippy::let_unit_value)]
-    let ret = Contract::default()
-        .signed_experiment(token_address, payee, amount, chain_id, salt, token_recipient, signature, hash)
-        .unwrap_or_revert();
-    runtime::ret(CLValue::from_t(ret).unwrap_or_revert());
-}
-
-#[no_mangle]
-pub extern "C" fn signed_basic() {
-    let hash = runtime::get_named_arg::<String>("hash");
-    let signature = runtime::get_named_arg::<String>(SIGNATURE);
-    #[allow(clippy::let_unit_value)]
-    let ret = Contract::default()
-        .signed_basic(signature, hash)
+        .withdraw_signed(
+            token_address,
+            payee,
+            amount,
+            chain_id,
+            salt,
+            token_recipient,
+            signature,
+        )
         .unwrap_or_revert();
     runtime::ret(CLValue::from_t(ret).unwrap_or_revert());
 }
@@ -303,35 +288,7 @@ pub extern "C" fn call() {
             Parameter::new(SALT, String::cl_type()),
             Parameter::new(SIGNATURE, String::cl_type()),
             Parameter::new(TOKEN_RECIPIENT, String::cl_type()),
-            Parameter::new("hash", String::cl_type()),
-        ],
-        CLType::Unit,
-        EntryPointAccess::Public,
-        EntryPointType::Contract,
-    ));
-
-    bridge_pool_entry_points.add_entry_point(EntryPoint::new(
-        "signed_experiment",
-        vec![
-            Parameter::new(PAYEE, String::cl_type()),
-            Parameter::new(CHAIN_ID, u64::cl_type()),
-            Parameter::new(TOKEN_ADDRESS, String::cl_type()),
-            Parameter::new(AMOUNT, U256::cl_type()),
-            Parameter::new(SALT, String::cl_type()),
-            Parameter::new(SIGNATURE, String::cl_type()),
-            Parameter::new(TOKEN_RECIPIENT, String::cl_type()),
-            Parameter::new("hash", String::cl_type()),
-        ],
-        CLType::Unit,
-        EntryPointAccess::Public,
-        EntryPointType::Contract,
-    ));
-
-    bridge_pool_entry_points.add_entry_point(EntryPoint::new(
-        "signed_basic",
-        vec![
-            Parameter::new(SIGNATURE, String::cl_type()),
-            Parameter::new("hash", String::cl_type()),
+            // Parameter::new("hash", String::cl_type()),
         ],
         CLType::Unit,
         EntryPointAccess::Public,
