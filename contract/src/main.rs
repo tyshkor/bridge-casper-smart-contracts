@@ -45,12 +45,14 @@ const AMOUNT: &str = "amount";
 const SIGNER: &str = "signer";
 const TOKEN_ADDRESS: &str = "token_address";
 const TARGET_TOKEN: &str = "target_token";
+const TARGET_ADDRESS: &str = "target_address";
 const TARGET_NETWORK: &str = "target_network";
 const TOKEN_NAME: &str = "token_name";
 const PAYEE: &str = "payee";
 const SALT: &str = "salt";
 const SIGNATURE: &str = "signature";
 const CHAIN_ID: &str = "chain_id";
+const TOKEN_RECIPIENT: &str = "token_recipient";
 
 const CONSTRUCTOR_GROUP: &str = "constructor_group";
 const ADMIN_GROUP: &str = "admin_group";
@@ -126,9 +128,16 @@ pub extern "C" fn swap() {
     let token_address = runtime::get_named_arg::<String>(TOKEN_ADDRESS);
     let target_network = runtime::get_named_arg::<U256>(TARGET_NETWORK);
     let target_token = runtime::get_named_arg::<String>(TARGET_TOKEN);
+    let target_address = runtime::get_named_arg::<String>(TARGET_ADDRESS);
     #[allow(clippy::let_unit_value)]
     let ret = Contract::default()
-        .swap(token_address, amount, target_network, target_token)
+        .swap(
+            token_address,
+            amount,
+            target_network,
+            target_token,
+            target_address,
+        )
         .unwrap_or_revert();
     runtime::ret(CLValue::from_t(ret).unwrap_or_revert());
 }
@@ -154,9 +163,18 @@ pub extern "C" fn withdraw_signed() {
     let chain_id = runtime::get_named_arg::<u64>(CHAIN_ID);
     let salt = runtime::get_named_arg::<String>(SALT);
     let signature = runtime::get_named_arg::<String>(SIGNATURE);
+    let token_recipient = runtime::get_named_arg::<String>(TOKEN_RECIPIENT);
     #[allow(clippy::let_unit_value)]
     let ret = Contract::default()
-        .withdraw_signed(token_address, payee, amount, chain_id, salt, signature)
+        .withdraw_signed(
+            token_address,
+            payee,
+            amount,
+            chain_id,
+            salt,
+            token_recipient,
+            signature,
+        )
         .unwrap_or_revert();
     runtime::ret(CLValue::from_t(ret).unwrap_or_revert());
 }
@@ -240,6 +258,7 @@ pub extern "C" fn call() {
             Parameter::new(TOKEN_ADDRESS, String::cl_type()),
             Parameter::new(TARGET_NETWORK, U256::cl_type()),
             Parameter::new(TARGET_TOKEN, String::cl_type()),
+            Parameter::new(TARGET_ADDRESS, String::cl_type()),
         ],
         CLType::Unit,
         EntryPointAccess::Public,
@@ -268,6 +287,7 @@ pub extern "C" fn call() {
             Parameter::new(AMOUNT, U256::cl_type()),
             Parameter::new(SALT, String::cl_type()),
             Parameter::new(SIGNATURE, String::cl_type()),
+            Parameter::new(TOKEN_RECIPIENT, String::cl_type()),
         ],
         CLType::Unit,
         EntryPointAccess::Public,

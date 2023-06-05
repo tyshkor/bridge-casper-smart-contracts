@@ -98,6 +98,7 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
         amount: U256,
         target_network: U256,
         target_token: String,
+        target_address: String,
     ) -> Result<(), Error> {
         let actor = detail::get_immediate_caller_address()
             .unwrap_or_revert_with(Error::ImmediateCallerFail);
@@ -106,9 +107,7 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
             .map_err(|_| Error::NotContractPackageHash)?;
 
         let bridge_pool_instance = BridgePool::instance();
-        bridge_pool_instance.swap(actor, token, target_token.clone(), amount, target_network)?;
-
-        let target_address = target_token;
+        bridge_pool_instance.swap(actor, token, target_token, amount, target_network)?;
 
         self.emit(BridgePoolEvent::BridgeSwap {
             actor,
@@ -137,6 +136,7 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
     }
 
     // outer function to withdraw liquidity from the pool securely
+    #[allow(clippy::too_many_arguments)]
     fn withdraw_signed(
         &mut self,
         token_address: String,
@@ -144,6 +144,7 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
         amount: U256,
         chain_id: u64,
         salt: String,
+        receiver: String,
         signature: String,
     ) -> Result<(), Error> {
         let actor = detail::get_immediate_caller_address()
@@ -152,25 +153,20 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
         let token = ContractPackageHash::from_formatted_str(token_address.as_str())
             .map_err(|_| Error::NotContractPackageHash)?;
 
-        let salt_array: [u8; 32] = hex::decode(salt)
-            .map_err(|_| Error::SaltHexFail)?
-            .try_into()
-            .map_err(|_| Error::SaltWrongSize)?;
-        let signature_vec = hex::decode(signature).unwrap();
-
         let bridge_pool_instance = BridgePool::instance();
         let signer = bridge_pool_instance.withdraw_signed(
             token,
-            payee.clone(),
+            payee,
             amount,
             chain_id,
-            salt_array,
-            signature_vec,
+            salt,
+            receiver.clone(),
+            hex::decode(signature).unwrap(),
             actor,
         )?;
         self.emit(BridgePoolEvent::TransferBySignature {
             signer,
-            receiver: payee,
+            receiver,
             token,
             amount,
         });
