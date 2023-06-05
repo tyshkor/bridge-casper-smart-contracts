@@ -208,50 +208,50 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
         let pub_key =  s.recover_ecdsa(&msg, &rec_sig).unwrap();
         let public_key = Vec::from(&keccak256_hash(&pub_key.serialize_uncompressed()[1..])[12..]);
 
-        // if bridge_pool_instance
-        //     .used_hashes_dict
-        //     .get::<bool>(message_hash.as_str())
-        //     .is_some()
-        // {
-        //     return Err(Error::MessageAlreadyUsed);
-        // } else {
-        //     bridge_pool_instance
-        //         .used_hashes_dict
-        //         .set(message_hash.as_str(), true);
-        // }
+        if bridge_pool_instance
+            .used_hashes_dict
+            .get::<bool>(message_hash.as_str())
+            .is_some()
+        {
+            return Err(Error::MessageAlreadyUsed);
+        } else {
+            bridge_pool_instance
+                .used_hashes_dict
+                .set(message_hash.as_str(), true);
+        }
 
-        // let signer = hex::encode(public_key);
+        let signer = hex::encode(public_key);
 
-        // if !bridge_pool_instance
-        //     .signers_dict
-        //     .get::<bool>(&signer)
-        //     .ok_or(Error::NoValueInSignersDict)?
-        // {
-        //     return Err(Error::InvalidSigner);
-        // }
+        if !bridge_pool_instance
+            .signers_dict
+            .get::<bool>(&signer)
+            .ok_or(Error::NoValueInSignersDict)?
+        {
+            return Err(Error::InvalidSigner);
+        }
 
-        // let client_addr = actor;
-        // runtime::call_versioned_contract::<()>(
-        //     token,
-        //     None,
-        //     "transfer",
-        //     runtime_args! {
-        //         "recipient" => client_addr,
-        //         AMOUNT => amount
-        //     },
-        // );
-        // bridge_pool_instance.del_liquidity_generic_from_dict(
-        //     token.to_formatted_string(),
-        //     actor.as_account_hash().unwrap().to_string(),
-        //     amount,
-        //     bridge_pool_instance.get_dict(actor)?,
-        // )?;
-        // self.emit(BridgePoolEvent::TransferBySignature {
-        //     signer,
-        //     receiver,
-        //     token,
-        //     amount,
-        // });
+        let client_addr = actor;
+        runtime::call_versioned_contract::<()>(
+            token,
+            None,
+            "transfer",
+            runtime_args! {
+                "recipient" => client_addr,
+                AMOUNT => amount
+            },
+        );
+        bridge_pool_instance.del_liquidity_generic_from_dict(
+            token.to_formatted_string(),
+            actor.as_account_hash().unwrap().to_string(),
+            amount,
+            bridge_pool_instance.get_dict(actor)?,
+        )?;
+        self.emit(BridgePoolEvent::TransferBySignature {
+            signer,
+            receiver,
+            token,
+            amount,
+        });
         Ok(())
     }
 
