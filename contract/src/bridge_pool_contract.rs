@@ -107,7 +107,7 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
             .map_err(|_| Error::NotContractPackageHash)?;
 
         let bridge_pool_instance = BridgePool::instance();
-        bridge_pool_instance.swap(actor, token, target_token.clone(), amount, target_network)?;
+        bridge_pool_instance.swap(actor, token, target_token, amount, target_network)?;
 
         self.emit(BridgePoolEvent::BridgeSwap {
             actor,
@@ -155,7 +155,7 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
         let bridge_pool_instance = BridgePool::instance();
         let signer = bridge_pool_instance.withdraw_signed(
             token,
-            payee.clone(),
+            payee,
             amount,
             chain_id,
             salt,

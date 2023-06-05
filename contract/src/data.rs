@@ -1,7 +1,7 @@
 use crate::alloc::borrow::ToOwned;
 use crate::error::Error;
 use crate::event::BridgePoolEvent;
-use crate::{address::Address, detail};
+use crate::{address::Address};
 use alloc::{
     collections::BTreeMap,
     string::{String, ToString},
@@ -244,7 +244,7 @@ impl BridgePool {
             .map_err(|_| Error::SaltWrongSize)?;
 
         let message_hash = hex::encode(keccak256(
-            &hex::encode(keccak256(
+            hex::encode(keccak256(
                 &[
                     token_contract_package_hash.to_formatted_string().as_bytes(),
                     payee.as_bytes(),
