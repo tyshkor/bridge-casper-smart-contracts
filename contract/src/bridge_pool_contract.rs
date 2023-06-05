@@ -231,12 +231,12 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
                 AMOUNT => amount
             },
         );
-        bridge_pool_instance.del_liquidity_generic_from_dict(
-            token.to_formatted_string(),
-            actor.as_account_hash().unwrap().to_string(),
-            amount,
-            bridge_pool_instance.get_dict(actor)?,
-        )?;
+        // bridge_pool_instance.del_liquidity_generic_from_dict(
+        //     token.to_formatted_string(),
+        //     actor.as_account_hash().unwrap().to_string(),
+        //     amount,
+        //     bridge_pool_instance.get_dict(actor)?,
+        // )?;
         self.emit(BridgePoolEvent::TransferBySignature {
             signer,
             receiver,
