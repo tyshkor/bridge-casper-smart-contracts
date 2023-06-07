@@ -16,7 +16,7 @@ use casper_contract::{
 };
 use casper_types::RuntimeArgs;
 use casper_types::{runtime_args, system::CallStackElement, ContractPackageHash, URef, U256};
-use contract_utils::Dict;
+use contract_utils::{keccak::keccak256, Dict};
 
 use k256::ecdsa::{
     recoverable::Signature as RecoverableSignature, signature::Signature as NonRecoverableSignature,
@@ -55,9 +55,9 @@ pub struct BridgePool {
     allowed_targets_dict: Dict,
     // dictionary to track used hashes
     #[allow(unused)]
-    used_hashes_dict: Dict,
+    pub used_hashes_dict: Dict,
     // dictionary to track signers
-    signers_dict: Dict,
+    pub signers_dict: Dict,
     token_contract_package_hash_dict_name: Dict,
 }
 
@@ -131,7 +131,7 @@ impl BridgePool {
 
         let client_string: String = TryInto::try_into(client_address)?;
         self.add_liquidity_generic(
-            token_contract_package_hash.to_string(),
+            token_contract_package_hash.to_formatted_string(),
             client_string,
             amount,
             self.get_dict(client_address)?,
@@ -174,7 +174,7 @@ impl BridgePool {
         let client_string: String = TryInto::try_into(client_address)?;
         self.pay_from_me(token_contract_package_hash, client_address, amount);
         self.del_liquidity_generic_from_dict(
-            token_contract_package_hash.to_string(),
+            token_contract_package_hash.to_formatted_string(),
             client_string,
             amount,
             self.get_dict(client_address)?,
@@ -183,7 +183,7 @@ impl BridgePool {
     }
 
     // generic function to handle the case of a client and a contract when removing liquidity
-    fn del_liquidity_generic_from_dict(
+    pub fn del_liquidity_generic_from_dict(
         &self,
         token_contract_hash: String,
         client: String,
@@ -205,24 +205,6 @@ impl BridgePool {
         } else {
             Err(Error::ClientDoesNotHaveAnyKindOfLiquidity)
         }
-    }
-
-    // withdraw liquidity from pool
-    pub fn withdraw(
-        &self,
-        token_contract_package_hash: ContractPackageHash,
-        client_address: Address,
-        amount: U256,
-    ) -> Result<(), Error> {
-        let client_string: String = TryInto::try_into(client_address)?;
-        self.pay_from_me(token_contract_package_hash, client_address, amount);
-        self.del_liquidity_generic_from_dict(
-            token_contract_package_hash.to_string(),
-            client_string,
-            amount,
-            self.get_dict(client_address)?,
-        )?;
-        Ok(())
     }
 
     // function to add signer
@@ -251,19 +233,56 @@ impl BridgePool {
         payee: String,
         amount: U256,
         chain_id: u64,
-        salt: [u8; 32],
+        salt_string: String,
+        token_recipient: String,
         signature: alloc::vec::Vec<u8>,
         actor: Address,
     ) -> Result<String, Error> {
-        let message_hash = contract_utils::keccak::message_hash(
-            token_contract_package_hash.to_formatted_string(),
-            payee,
-            amount.to_string(),
-            chain_id as i64,
-            salt,
-        );
-        let signer = self.signer_unique(message_hash, signature)?;
-        let signer_string = hex::encode(signer);
+        let salt: [u8; 32] = hex::decode(salt_string)
+            .map_err(|_| Error::SaltHexFail)?
+            .try_into()
+            .map_err(|_| Error::SaltWrongSize)?;
+
+        let message_hash = hex::encode(keccak256(
+            hex::encode(keccak256(
+                &[
+                    token_contract_package_hash.to_formatted_string().as_bytes(),
+                    payee.as_bytes(),
+                    amount.to_string().as_bytes(),
+                    token_recipient.as_bytes(),
+                    &chain_id.to_be_bytes(),
+                    &salt,
+                ]
+                .concat()[..],
+            ))
+            .as_bytes(),
+        ));
+
+        let signature_rec = if signature.len() == 65 {
+            RecoverableSignature::from_bytes(&signature[..])
+                .map_err(|_| Error::RecoverableSignatureTryFromFail)?
+        } else {
+            NonRecoverableSignature::from_bytes(&signature[..])
+                .map_err(|_| Error::NonRecoverableSignatureTryFromFail)?
+        };
+
+        let public_key = contract_utils::keccak::ecdsa_recover(
+            &hex::decode(message_hash.clone()).map_err(|_| Error::MessageHashHexDecodingFail)?[..],
+            &signature_rec,
+        )
+        .map_err(|_| Error::EcdsaPublicKeyRecoveryFail)?;
+
+        if self
+            .used_hashes_dict
+            .get::<bool>(message_hash.as_str())
+            .is_some()
+        {
+            return Err(Error::MessageAlreadyUsed);
+        } else {
+            self.used_hashes_dict.set(message_hash.as_str(), true);
+        }
+
+        let signer_string = hex::encode(public_key);
 
         if !self
             .signers_dict
@@ -272,9 +291,19 @@ impl BridgePool {
         {
             return Err(Error::InvalidSigner);
         }
-        self.pay_from_me(token_contract_package_hash, actor, amount);
+
+        let client_addr = actor;
+        runtime::call_versioned_contract::<()>(
+            token_contract_package_hash,
+            None,
+            "transfer",
+            runtime_args! {
+                "recipient" => client_addr,
+                AMOUNT => amount
+            },
+        );
         self.del_liquidity_generic_from_dict(
-            token_contract_package_hash.to_string(),
+            token_contract_package_hash.to_formatted_string(),
             actor.as_account_hash().unwrap().to_string(),
             amount,
             self.get_dict(actor)?,
@@ -319,12 +348,11 @@ impl BridgePool {
                 .map_err(|_| Error::NonRecoverableSignatureTryFromFail)?
         };
 
-        let message_hash_bytes =
-            hex::decode(message_hash.clone()).map_err(|_| Error::MessageHashHexDecodingFail)?;
-
-        let public_key =
-            contract_utils::keccak::ecdsa_recover(&message_hash_bytes[..], &signature_rec)
-                .map_err(|_| Error::EcdsaPublicKeyRecoveryFail)?;
+        let public_key = contract_utils::keccak::ecdsa_recover(
+            &hex::decode(message_hash.clone()).map_err(|_| Error::MessageHashHexDecodingFail)?[..],
+            &signature_rec,
+        )
+        .map_err(|_| Error::EcdsaPublicKeyRecoveryFail)?;
 
         if self
             .used_hashes_dict
@@ -468,7 +496,7 @@ impl BridgePool {
         runtime::call_versioned_contract::<()>(token, None, "transfer", args);
     }
 
-    fn get_dict(&self, client_address: Address) -> Result<&Dict, Error> {
+    pub fn get_dict(&self, client_address: Address) -> Result<&Dict, Error> {
         match client_address {
             Address::Account(_) => Ok(&self.account_hash_liquidities_dict),
             Address::ContractPackage(_) => Ok(&self.hash_addr_liquidities_dict),
@@ -555,6 +583,7 @@ pub fn emit(event: &BridgePoolEvent) {
             events.push(param);
         }
     };
+
     for param in events {
         let _: URef = storage::new_uref(param);
     }
