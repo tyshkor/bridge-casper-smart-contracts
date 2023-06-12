@@ -160,13 +160,19 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
         let actor = detail::get_immediate_caller_address()
             .unwrap_or_revert_with(Error::ImmediateCallerFail);
 
-        let client_address_string: String = if let Some(account_hash) = actor.as_account_hash() {
-            Ok(account_hash.to_string())
-        } else if let Some(contract_package_hash) = actor.as_contract_package_hash() {
-            Ok(contract_package_hash.to_string())
-        } else {
-            Err(Error::NeitherAccountHashNorNeitherContractPackageHash)
-        }?;
+        let mut client_address_string: String = "".to_string();
+        let mut valid = false;
+        if let Some(account_hash) = actor.as_account_hash() {
+            client_address_string = account_hash.to_string();
+            valid = true;
+        }
+        if let Some(contract_package_hash) = actor.as_contract_package_hash() {
+            client_address_string = contract_package_hash.to_string();
+            valid = true;
+        }
+        if !valid {
+            return Err(Error::NeitherAccountHashNorNeitherContractPackageHash);
+        };
 
         let token = ContractPackageHash::from_formatted_str(token_address.as_str())
             .map_err(|_| Error::NotContractPackageHash)?;
