@@ -162,10 +162,6 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
 
         let client_address_string: String = actor.try_into()?;
 
-        if caller != client_address_string {
-            return Err(Error::WrongCaller);
-        }
-
         let token = ContractPackageHash::from_formatted_str(token_address.as_str())
             .map_err(|_| Error::NotContractPackageHash)?;
 
@@ -184,7 +180,7 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
                     token.to_formatted_string().as_bytes(),
                     amount.to_string().as_bytes(),
                     receiver.as_bytes(),
-                    caller.as_bytes(),
+                    client_address_string.as_bytes(),
                     &chain_id.to_be_bytes(),
                     &salt,
                 ]
@@ -248,7 +244,7 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
         );
         bridge_pool_instance.del_liquidity_generic_from_dict(
             token.to_formatted_string(),
-            actor.as_account_hash().unwrap().to_string(),
+            client_address_string,
             amount,
             bridge_pool_instance.get_dict(actor)?,
         )?;
