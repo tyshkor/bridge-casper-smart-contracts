@@ -155,7 +155,7 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
         salt: String,
         receiver: String,
         signature: String,
-        caller: String,
+        _caller: String,
     ) -> Result<(), Error> {
         let actor = detail::get_immediate_caller_address()
             .unwrap_or_revert_with(Error::ImmediateCallerFail);
