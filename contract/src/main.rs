@@ -48,7 +48,6 @@ const TARGET_TOKEN: &str = "target_token";
 const TARGET_ADDRESS: &str = "target_address";
 const TARGET_NETWORK: &str = "target_network";
 const TOKEN_NAME: &str = "token_name";
-const PAYEE: &str = "payee";
 const SALT: &str = "salt";
 const SIGNATURE: &str = "signature";
 const CHAIN_ID: &str = "chain_id";
@@ -159,7 +158,6 @@ pub extern "C" fn allow_target() {
 #[no_mangle]
 pub extern "C" fn withdraw_signed() {
     let token_address = runtime::get_named_arg::<String>(TOKEN_ADDRESS);
-    let payee = runtime::get_named_arg::<String>(PAYEE);
     let amount = runtime::get_named_arg::<U256>(AMOUNT);
     let chain_id = runtime::get_named_arg::<u64>(CHAIN_ID);
     let salt = runtime::get_named_arg::<String>(SALT);
@@ -170,7 +168,6 @@ pub extern "C" fn withdraw_signed() {
     let ret = Contract::default()
         .withdraw_signed(
             token_address,
-            payee,
             amount,
             chain_id,
             salt,
@@ -284,7 +281,6 @@ pub extern "C" fn call() {
     bridge_pool_entry_points.add_entry_point(EntryPoint::new(
         ENTRY_POINT_WITHDRAW_SIGNED,
         vec![
-            Parameter::new(PAYEE, String::cl_type()),
             Parameter::new(CHAIN_ID, u64::cl_type()),
             Parameter::new(TOKEN_ADDRESS, String::cl_type()),
             Parameter::new(AMOUNT, U256::cl_type()),

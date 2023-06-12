@@ -836,7 +836,6 @@ mod tests {
 
         let message_hash = contract_utils::keccak::message_hash(
             erc20_contract_package_hash_string.clone(),
-            payee.clone(),
             amount.to_string(),
             caller.clone(),
             chain_id,

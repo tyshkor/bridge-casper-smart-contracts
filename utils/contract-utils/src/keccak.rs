@@ -42,7 +42,6 @@ pub fn keccak256_hash(bytes: &[u8]) -> Vec<u8> {
 
 pub fn message_hash(
     token_contract_package_hash: String,
-    payee: String,
     amount: String,
     caller: String,
     chain_id: u64,
@@ -52,7 +51,6 @@ pub fn message_hash(
 
     hex::encode(keccak256(&hex::encode(keccak256(&[
         token_contract_package_hash.as_bytes(),
-        payee.as_bytes(),
         amount.as_bytes(),
         token_recipient.as_bytes(),
         caller.as_bytes(),

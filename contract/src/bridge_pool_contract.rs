@@ -150,7 +150,6 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
     fn withdraw_signed(
         &mut self,
         token_address: String,
-        payee: String,
         amount: U256,
         chain_id: u64,
         salt: String,
@@ -186,7 +185,6 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
             hex::encode(keccak256(
                 &[
                     token.to_formatted_string().as_bytes(),
-                    payee.as_bytes(),
                     amount.to_string().as_bytes(),
                     receiver.as_bytes(),
                     caller.as_bytes(),
