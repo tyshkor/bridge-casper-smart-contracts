@@ -160,10 +160,7 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
         let actor = detail::get_immediate_caller_address()
             .unwrap_or_revert_with(Error::ImmediateCallerFail);
 
-        let client_address = detail::get_immediate_caller_address()
-            .unwrap_or_revert_with(Error::ImmediateCallerFail);
-
-        let client_address_string: String = client_address.try_into()?;
+        let client_address_string: String = actor.try_into()?;
 
         if caller != client_address_string {
             return Err(Error::WrongCaller);
