@@ -243,23 +243,19 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
             },
         );
 
-        if let Some(clients_dict_address) = bridge_pool_instance
+        let clients_dict_address = bridge_pool_instance
             .get_dict(actor)?
             .get::<String>(token.to_formatted_string().as_str())
-        {
-            let clients_dict = Dict::instance(clients_dict_address.as_str());
-            if let Some(client_amount) = clients_dict.get::<U256>(client_address_string.as_str()) {
-                if let Some(new_amount) = client_amount.checked_sub(amount) {
-                    clients_dict.set(client_address_string.as_str(), new_amount);
-                } else {
-                    return Err(Error::CheckedSubFail);
-                }
-            } else {
-                return Err(Error::ClientDoesNotHaveSpecificKindOfLiquidity);
-            }
-        } else {
-            return Err(Error::ClientDoesNotHaveAnyKindOfLiquidity);
-        }
+            .ok_or(Error::ClientDoesNotHaveAnyKindOfLiquidity)?;
+
+        let clients_dict = Dict::instance(clients_dict_address.as_str());
+        let client_amount = clients_dict
+            .get::<U256>(client_address_string.as_str())
+            .ok_or(Error::ClientDoesNotHaveSpecificKindOfLiquidity)?;
+        let new_amount = client_amount
+            .checked_sub(amount)
+            .ok_or(Error::CheckedSubFail)?;
+        clients_dict.set(client_address_string.as_str(), new_amount);
 
         self.emit(BridgePoolEvent::TransferBySignature {
             signer,
