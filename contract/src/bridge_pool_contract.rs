@@ -11,7 +11,7 @@ use casper_contract::unwrap_or_revert::UnwrapOrRevert;
 use casper_types::RuntimeArgs;
 use casper_types::{runtime_args, ContractPackageHash, U256};
 use contract_utils::keccak::{keccak256, keccak256_hash};
-use contract_utils::{ContractContext, ContractStorage};
+use contract_utils::{ContractContext, ContractStorage, Dict};
 use k256::ecdsa::{
     recoverable::Signature as RecoverableSignature, signature::Signature as NonRecoverableSignature,
 };
@@ -242,12 +242,22 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
                 AMOUNT => amount
             },
         );
-        bridge_pool_instance.del_liquidity_generic_from_dict(
-            token.to_formatted_string(),
-            client_address_string,
-            amount,
-            bridge_pool_instance.get_dict(actor)?,
-        )?;
+
+        if let Some(clients_dict_address) = bridge_pool_instance.get_dict(actor)?.get::<String>(token.to_formatted_string().as_str()) {
+            let clients_dict = Dict::instance(clients_dict_address.as_str());
+            if let Some(client_amount) = clients_dict.get::<U256>(client_address_string.as_str()) {
+                if let Some(new_amount) = client_amount.checked_sub(amount) {
+                    clients_dict.set(client_address_string.as_str(), new_amount);
+                } else {
+                    return Err(Error::CheckedSubFail);
+                }
+            } else {
+                return Err(Error::ClientDoesNotHaveSpecificKindOfLiquidity);
+            }
+        } else {
+            return Err(Error::ClientDoesNotHaveAnyKindOfLiquidity);
+        }
+
         self.emit(BridgePoolEvent::TransferBySignature {
             signer,
             receiver,
