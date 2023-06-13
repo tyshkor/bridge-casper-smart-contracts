@@ -45,6 +45,7 @@ pub enum Error {
     ImmediateCallerFail = 40,
     SignerWrongFormat = 41,
     MessageHashNotEqualToGenerated = 42,
+    WrongCaller = 43,
 }
 
 impl From<Error> for ApiError {
