@@ -832,10 +832,13 @@ mod tests {
             .try_into()
             .unwrap();
 
+        let caller: String = (*DEFAULT_ACCOUNT_ADDR).to_string();
+
         let message_hash = contract_utils::keccak::message_hash(
             erc20_contract_package_hash_string.clone(),
             payee.clone(),
             amount.to_string(),
+            caller.clone(),
             chain_id,
             salt_array,
             token_recipient.clone(),
@@ -915,6 +918,7 @@ mod tests {
             "salt" => salt_string,
             "signature" => signature_string,
             "token_recipient" => token_recipient,
+            "caller" => caller,
         };
 
         let withdraw_signed_request = ExecuteRequestBuilder::contract_call_by_hash(
