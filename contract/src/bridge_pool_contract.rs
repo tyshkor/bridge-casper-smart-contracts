@@ -147,6 +147,7 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
 
     // outer function to withdraw liquidity from the pool securely
     #[allow(clippy::too_many_arguments)]
+    #[inline(always)]
     fn withdraw_signed(
         &mut self,
         token_address: String,
@@ -156,9 +157,19 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
         salt: String,
         receiver: String,
         signature: String,
+        caller: String,
     ) -> Result<(), Error> {
         let actor = detail::get_immediate_caller_address()
             .unwrap_or_revert_with(Error::ImmediateCallerFail);
+
+        let client_address = detail::get_immediate_caller_address()
+            .unwrap_or_revert_with(Error::ImmediateCallerFail);
+
+        let client_address_string: String = client_address.try_into()?;
+
+        if caller != client_address_string {
+            return Err(Error::WrongCaller);
+        }
 
         let token = ContractPackageHash::from_formatted_str(token_address.as_str())
             .map_err(|_| Error::NotContractPackageHash)?;
@@ -179,6 +190,7 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
                     payee.as_bytes(),
                     amount.to_string().as_bytes(),
                     receiver.as_bytes(),
+                    caller.as_bytes(),
                     &chain_id.to_be_bytes(),
                     &salt,
                 ]
