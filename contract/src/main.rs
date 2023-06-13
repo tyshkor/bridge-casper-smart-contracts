@@ -48,11 +48,11 @@ const TARGET_TOKEN: &str = "target_token";
 const TARGET_ADDRESS: &str = "target_address";
 const TARGET_NETWORK: &str = "target_network";
 const TOKEN_NAME: &str = "token_name";
-const PAYEE: &str = "payee";
 const SALT: &str = "salt";
 const SIGNATURE: &str = "signature";
 const CHAIN_ID: &str = "chain_id";
 const TOKEN_RECIPIENT: &str = "token_recipient";
+const CALLER: &str = "caller";
 
 const CONSTRUCTOR_GROUP: &str = "constructor_group";
 const ADMIN_GROUP: &str = "admin_group";
@@ -158,22 +158,22 @@ pub extern "C" fn allow_target() {
 #[no_mangle]
 pub extern "C" fn withdraw_signed() {
     let token_address = runtime::get_named_arg::<String>(TOKEN_ADDRESS);
-    let payee = runtime::get_named_arg::<String>(PAYEE);
     let amount = runtime::get_named_arg::<U256>(AMOUNT);
     let chain_id = runtime::get_named_arg::<u64>(CHAIN_ID);
     let salt = runtime::get_named_arg::<String>(SALT);
     let signature = runtime::get_named_arg::<String>(SIGNATURE);
     let token_recipient = runtime::get_named_arg::<String>(TOKEN_RECIPIENT);
+    let caller = runtime::get_named_arg::<String>(CALLER);
     #[allow(clippy::let_unit_value)]
     let ret = Contract::default()
         .withdraw_signed(
             token_address,
-            payee,
             amount,
             chain_id,
             salt,
             token_recipient,
             signature,
+            caller,
         )
         .unwrap_or_revert();
     runtime::ret(CLValue::from_t(ret).unwrap_or_revert());
@@ -281,13 +281,13 @@ pub extern "C" fn call() {
     bridge_pool_entry_points.add_entry_point(EntryPoint::new(
         ENTRY_POINT_WITHDRAW_SIGNED,
         vec![
-            Parameter::new(PAYEE, String::cl_type()),
             Parameter::new(CHAIN_ID, u64::cl_type()),
             Parameter::new(TOKEN_ADDRESS, String::cl_type()),
             Parameter::new(AMOUNT, U256::cl_type()),
             Parameter::new(SALT, String::cl_type()),
             Parameter::new(SIGNATURE, String::cl_type()),
             Parameter::new(TOKEN_RECIPIENT, String::cl_type()),
+            Parameter::new(CALLER, String::cl_type()),
         ],
         CLType::Unit,
         EntryPointAccess::Public,

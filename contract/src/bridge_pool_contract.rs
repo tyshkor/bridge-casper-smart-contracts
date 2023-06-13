@@ -11,7 +11,7 @@ use casper_contract::unwrap_or_revert::UnwrapOrRevert;
 use casper_types::RuntimeArgs;
 use casper_types::{runtime_args, ContractPackageHash, U256};
 use contract_utils::keccak::{keccak256, keccak256_hash};
-use contract_utils::{ContractContext, ContractStorage};
+use contract_utils::{ContractContext, ContractStorage, Dict};
 use k256::ecdsa::{
     recoverable::Signature as RecoverableSignature, signature::Signature as NonRecoverableSignature,
 };
@@ -147,18 +147,33 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
 
     // outer function to withdraw liquidity from the pool securely
     #[allow(clippy::too_many_arguments)]
+    #[inline(always)]
     fn withdraw_signed(
         &mut self,
         token_address: String,
-        payee: String,
         amount: U256,
         chain_id: u64,
         salt: String,
         receiver: String,
         signature: String,
+        _caller: String,
     ) -> Result<(), Error> {
         let actor = detail::get_immediate_caller_address()
             .unwrap_or_revert_with(Error::ImmediateCallerFail);
+
+        let mut client_address_string: String = "".to_string();
+        let mut valid = false;
+        if let Some(account_hash) = actor.as_account_hash() {
+            client_address_string = account_hash.to_string();
+            valid = true;
+        }
+        if let Some(contract_package_hash) = actor.as_contract_package_hash() {
+            client_address_string = contract_package_hash.to_string();
+            valid = true;
+        }
+        if !valid {
+            return Err(Error::NeitherAccountHashNorNeitherContractPackageHash);
+        };
 
         let token = ContractPackageHash::from_formatted_str(token_address.as_str())
             .map_err(|_| Error::NotContractPackageHash)?;
@@ -176,9 +191,9 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
             hex::encode(keccak256(
                 &[
                     token.to_formatted_string().as_bytes(),
-                    payee.as_bytes(),
                     amount.to_string().as_bytes(),
                     receiver.as_bytes(),
+                    client_address_string.as_bytes(),
                     &chain_id.to_be_bytes(),
                     &salt,
                 ]
@@ -197,13 +212,12 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
 
         let hash =
             &hex::decode(message_hash.clone()).map_err(|_| Error::MessageHashHexDecodingFail)?[..];
-        let sig = &signature_rec;
 
         let s = Secp256k1::new();
         let msg = Message::from_slice(hash).unwrap();
-        let mut sig_compact: Vec<u8> = sig.r().to_bytes().to_vec();
-        sig_compact.extend(&sig.s().to_bytes().to_vec());
-        let id_u8: u8 = From::from(sig.recovery_id());
+        let mut sig_compact: Vec<u8> = signature_rec.r().to_bytes().to_vec();
+        sig_compact.extend(&signature_rec.s().to_bytes().to_vec());
+        let id_u8: u8 = From::from(signature_rec.recovery_id());
         let sig_v = secp256k1::ecdsa::RecoveryId::from_i32(id_u8 as i32).unwrap();
         let rec_sig =
             secp256k1::ecdsa::RecoverableSignature::from_compact(&sig_compact, sig_v).unwrap();
@@ -232,22 +246,30 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
             return Err(Error::InvalidSigner);
         }
 
-        let client_addr = actor;
         runtime::call_versioned_contract::<()>(
             token,
             None,
             "transfer",
             runtime_args! {
-                "recipient" => client_addr,
+                "recipient" => actor,
                 AMOUNT => amount
             },
         );
-        bridge_pool_instance.del_liquidity_generic_from_dict(
-            token.to_formatted_string(),
-            actor.as_account_hash().unwrap().to_string(),
-            amount,
-            bridge_pool_instance.get_dict(actor)?,
-        )?;
+
+        let clients_dict_address = bridge_pool_instance
+            .get_dict(actor)?
+            .get::<String>(token.to_formatted_string().as_str())
+            .ok_or(Error::ClientDoesNotHaveAnyKindOfLiquidity)?;
+
+        let clients_dict = Dict::instance(clients_dict_address.as_str());
+        let client_amount = clients_dict
+            .get::<U256>(client_address_string.as_str())
+            .ok_or(Error::ClientDoesNotHaveSpecificKindOfLiquidity)?;
+        let new_amount = client_amount
+            .checked_sub(amount)
+            .ok_or(Error::CheckedSubFail)?;
+        clients_dict.set(client_address_string.as_str(), new_amount);
+
         self.emit(BridgePoolEvent::TransferBySignature {
             signer,
             receiver,
