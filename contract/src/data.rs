@@ -1,7 +1,15 @@
-use crate::address::Address;
 use crate::alloc::borrow::ToOwned;
+use crate::consts::{
+    ACCOUNT_HASH_LIQUIDITIES_DICT, ACTOR, ALLOWED_TARGETS_DICT, BRIDGE_POOL_CONTRACT_PACKAGE_HASH,
+    CONTRACT_PACKAGE_HASH, ERC20_ENTRY_POINT_TRANSFER, ERC20_ENTRY_POINT_TRANSFER_FROM,
+    EVENT_BRIDGE_LIQUIDITY_ADDED, EVENT_BRIDGE_LIQUIDITY_REMOVED, EVENT_BRIDGE_SWAP,
+    EVENT_BRIDGE_TRANSFER_BY_SIGNATURE, EVENT_TYPE, HASH_ADDR_LIQUIDITIES_DICT, OWNER, RECEIVER,
+    RECIPIENT, SIGNER, SIGNERS_DICT, TARGET_ADDRESS, TARGET_NETWORK, TOKEN,
+    TOKEN_CONTRACT_PACKAGE_HASH_DICT_NAME, USED_HASHES_DICT,
+};
 use crate::error::Error;
 use crate::event::BridgePoolEvent;
+use crate::{address::Address, consts::AMOUNT};
 use alloc::{
     collections::BTreeMap,
     string::{String, ToString},
@@ -16,35 +24,7 @@ use casper_contract::{
 };
 use casper_types::RuntimeArgs;
 use casper_types::{runtime_args, system::CallStackElement, ContractPackageHash, URef, U256};
-use contract_utils::{keccak::keccak256, Dict};
-
-use k256::ecdsa::{
-    recoverable::Signature as RecoverableSignature, signature::Signature as NonRecoverableSignature,
-};
-
-const ACCOUNT_HASH_LIQUIDITIES_DICT: &str = "account_hash_liquidities_dict";
-const HASH_ADDR_LIQUIDITIES_DICT: &str = "hash_addr_liquidities_dict";
-const ALLOWED_TARGETS_DICT: &str = "allowed_targets_dict";
-const USED_HASHES_DICT: &str = "used_hashes_dict";
-const SIGNERS_DICT: &str = "signers_dict";
-const TOKEN_CONTRACT_PACKAGE_HASH_DICT_NAME: &str = "token_contract_package_hash_dict_name";
-const BRIDGE_POOL_CONTRACT_PACKAGE_HASH: &str = "bridge_pool_contract_package_hash";
-
-const CONTRACT_PACKAGE_HASH: &str = "contract_package_hash";
-
-const AMOUNT: &str = "amount";
-const SIGNER: &str = "signer";
-const TARGET_NETWORK: &str = "target_network";
-const TARGET_ADDRESS: &str = "target_address";
-const TOKEN: &str = "token";
-const RECEIVER: &str = "receiver";
-const ACTOR: &str = "actor";
-const EVENT_TYPE: &str = "event_type";
-
-const BRIDGE_LIQUIDITY_ADDED: &str = "bridge_liquidity_added";
-const BRIDGE_LIQUIDITY_REMOVED: &str = "bridge_liquidity_removed";
-const BRIDGE_SWAP: &str = "bridge_swap";
-const BRIDGE_TRANSFER_BY_SIGNATURE: &str = "bridge_transfer_by_signature";
+use contract_utils::Dict;
 
 pub struct BridgePool {
     // dictionary to track client conected dictionaries
@@ -225,147 +205,6 @@ impl BridgePool {
         Ok(res)
     }
 
-    // withdraw liquidity from pool securely
-    #[allow(clippy::too_many_arguments)]
-    pub fn withdraw_signed(
-        &self,
-        token_contract_package_hash: ContractPackageHash,
-        payee: String,
-        amount: U256,
-        chain_id: u64,
-        salt_string: String,
-        token_recipient: String,
-        signature: alloc::vec::Vec<u8>,
-        actor: Address,
-    ) -> Result<String, Error> {
-        let salt: [u8; 32] = hex::decode(salt_string)
-            .map_err(|_| Error::SaltHexFail)?
-            .try_into()
-            .map_err(|_| Error::SaltWrongSize)?;
-
-        let message_hash = hex::encode(keccak256(
-            hex::encode(keccak256(
-                &[
-                    token_contract_package_hash.to_formatted_string().as_bytes(),
-                    payee.as_bytes(),
-                    amount.to_string().as_bytes(),
-                    token_recipient.as_bytes(),
-                    &chain_id.to_be_bytes(),
-                    &salt,
-                ]
-                .concat()[..],
-            ))
-            .as_bytes(),
-        ));
-
-        let signature_rec = if signature.len() == 65 {
-            RecoverableSignature::from_bytes(&signature[..])
-                .map_err(|_| Error::RecoverableSignatureTryFromFail)?
-        } else {
-            NonRecoverableSignature::from_bytes(&signature[..])
-                .map_err(|_| Error::NonRecoverableSignatureTryFromFail)?
-        };
-
-        let public_key = contract_utils::keccak::ecdsa_recover(
-            &hex::decode(message_hash.clone()).map_err(|_| Error::MessageHashHexDecodingFail)?[..],
-            &signature_rec,
-        )
-        .map_err(|_| Error::EcdsaPublicKeyRecoveryFail)?;
-
-        if self
-            .used_hashes_dict
-            .get::<bool>(message_hash.as_str())
-            .is_some()
-        {
-            return Err(Error::MessageAlreadyUsed);
-        } else {
-            self.used_hashes_dict.set(message_hash.as_str(), true);
-        }
-
-        let signer_string = hex::encode(public_key);
-
-        if !self
-            .signers_dict
-            .get::<bool>(&signer_string)
-            .ok_or(Error::NoValueInSignersDict)?
-        {
-            return Err(Error::InvalidSigner);
-        }
-
-        let client_addr = actor;
-        runtime::call_versioned_contract::<()>(
-            token_contract_package_hash,
-            None,
-            "transfer",
-            runtime_args! {
-                "recipient" => client_addr,
-                AMOUNT => amount
-            },
-        );
-        self.del_liquidity_generic_from_dict(
-            token_contract_package_hash.to_formatted_string(),
-            actor.as_account_hash().unwrap().to_string(),
-            amount,
-            self.get_dict(actor)?,
-        )?;
-        Ok(signer_string)
-    }
-
-    // function to build signed message
-    pub fn withdraw_signed_message(
-        &self,
-        token_contract_package_hash: ContractPackageHash,
-        payee: String,
-        amount: U256,
-        salt: [u8; 32],
-    ) -> [u8; 32] {
-        let contract_package_hash_bytes = token_contract_package_hash.as_bytes();
-        let payee_bytes = payee.as_bytes();
-        let amount_string = amount.to_string();
-        let amount_bytes = amount_string.as_bytes();
-
-        let concatenated: Vec<u8> = [
-            contract_package_hash_bytes,
-            payee_bytes,
-            amount_bytes,
-            &salt[..],
-        ]
-        .concat();
-        let data = &concatenated[..];
-        contract_utils::keccak::keccak256(data)
-    }
-
-    pub fn signer_unique(
-        &self,
-        message_hash: String,
-        signature: alloc::vec::Vec<u8>,
-    ) -> Result<Vec<u8>, Error> {
-        let signature_rec = if signature.len() == 65 {
-            RecoverableSignature::from_bytes(&signature[..])
-                .map_err(|_| Error::RecoverableSignatureTryFromFail)?
-        } else {
-            NonRecoverableSignature::from_bytes(&signature[..])
-                .map_err(|_| Error::NonRecoverableSignatureTryFromFail)?
-        };
-
-        let public_key = contract_utils::keccak::ecdsa_recover(
-            &hex::decode(message_hash.clone()).map_err(|_| Error::MessageHashHexDecodingFail)?[..],
-            &signature_rec,
-        )
-        .map_err(|_| Error::EcdsaPublicKeyRecoveryFail)?;
-
-        if self
-            .used_hashes_dict
-            .get::<bool>(message_hash.as_str())
-            .is_some()
-        {
-            return Err(Error::MessageAlreadyUsed);
-        } else {
-            self.used_hashes_dict.set(message_hash.as_str(), true);
-        }
-        Ok(public_key)
-    }
-
     // function to swap tokens from different pools
     pub fn swap(
         &self,
@@ -466,11 +305,11 @@ impl BridgePool {
     // pay from any address to any address. Remember to approve the tokens beforehand
     fn pay_to(&self, token: ContractPackageHash, owner: Address, recipient: Address, amount: U256) {
         let args = runtime_args! {
-            "owner" => owner,
-            "recipient" => recipient,
+            OWNER => owner,
+            RECIPIENT => recipient,
             AMOUNT => amount
         };
-        runtime::call_versioned_contract::<()>(token, None, "transfer_from", args);
+        runtime::call_versioned_contract::<()>(token, None, ERC20_ENTRY_POINT_TRANSFER_FROM, args);
     }
 
     // pay from any address to this contract. Remember to approve the tokens beforehand
@@ -490,10 +329,10 @@ impl BridgePool {
 
     fn pay_from_me(&self, token: ContractPackageHash, recipient: Address, amount: U256) {
         let args = runtime_args! {
-            "recipient" => recipient,
+            RECIPIENT => recipient,
             AMOUNT => amount
         };
-        runtime::call_versioned_contract::<()>(token, None, "transfer", args);
+        runtime::call_versioned_contract::<()>(token, None, ERC20_ENTRY_POINT_TRANSFER, args);
     }
 
     pub fn get_dict(&self, client_address: Address) -> Result<&Dict, Error> {
@@ -531,7 +370,7 @@ pub fn emit(event: &BridgePoolEvent) {
         } => {
             let mut param = BTreeMap::new();
             param.insert(CONTRACT_PACKAGE_HASH, package.to_string());
-            param.insert(EVENT_TYPE, BRIDGE_LIQUIDITY_ADDED.to_string());
+            param.insert(EVENT_TYPE, EVENT_BRIDGE_LIQUIDITY_ADDED.to_string());
             param.insert(ACTOR, (*actor).try_into().unwrap());
             param.insert(TOKEN, token.to_string());
             param.insert(AMOUNT, amount.to_string());
@@ -544,7 +383,7 @@ pub fn emit(event: &BridgePoolEvent) {
         } => {
             let mut param = BTreeMap::new();
             param.insert(CONTRACT_PACKAGE_HASH, package.to_string());
-            param.insert(EVENT_TYPE, BRIDGE_LIQUIDITY_REMOVED.to_string());
+            param.insert(EVENT_TYPE, EVENT_BRIDGE_LIQUIDITY_REMOVED.to_string());
             param.insert(ACTOR, (*actor).try_into().unwrap());
             param.insert(TOKEN, token.to_string());
             param.insert(AMOUNT, amount.to_string());
@@ -559,7 +398,7 @@ pub fn emit(event: &BridgePoolEvent) {
         } => {
             let mut param = BTreeMap::new();
             param.insert(CONTRACT_PACKAGE_HASH, package.to_string());
-            param.insert(EVENT_TYPE, BRIDGE_SWAP.to_string());
+            param.insert(EVENT_TYPE, EVENT_BRIDGE_SWAP.to_string());
             param.insert(ACTOR, (*actor).try_into().unwrap());
             param.insert(TOKEN, token.to_string());
             param.insert(TARGET_NETWORK, target_network.to_string());
@@ -575,7 +414,7 @@ pub fn emit(event: &BridgePoolEvent) {
         } => {
             let mut param = BTreeMap::new();
             param.insert(CONTRACT_PACKAGE_HASH, package.to_string());
-            param.insert(EVENT_TYPE, BRIDGE_TRANSFER_BY_SIGNATURE.to_string());
+            param.insert(EVENT_TYPE, EVENT_BRIDGE_TRANSFER_BY_SIGNATURE.to_string());
             param.insert(SIGNER, signer.clone());
             param.insert(TOKEN, token.to_string());
             param.insert(RECEIVER, receiver.to_string());

@@ -1,3 +1,4 @@
+use crate::consts::{AMOUNT, ERC20_ENTRY_POINT_TRANSFER, RECIPIENT};
 use crate::detail;
 use crate::{
     data::{self, BridgePool},
@@ -16,8 +17,6 @@ use k256::ecdsa::{
     recoverable::Signature as RecoverableSignature, signature::Signature as NonRecoverableSignature,
 };
 use secp256k1::{Message, Secp256k1};
-
-const AMOUNT: &str = "amount";
 
 pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage> {
     fn init(&mut self) {
@@ -248,9 +247,9 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
         runtime::call_versioned_contract::<()>(
             token,
             None,
-            "transfer",
+            ERC20_ENTRY_POINT_TRANSFER,
             runtime_args! {
-                "recipient" => client_addr,
+                RECIPIENT => client_addr,
                 AMOUNT => amount
             },
         );
