@@ -24,11 +24,7 @@ use casper_contract::{
 };
 use casper_types::RuntimeArgs;
 use casper_types::{runtime_args, system::CallStackElement, ContractPackageHash, URef, U256};
-use contract_utils::{keccak::keccak256, Dict};
-
-use k256::ecdsa::{
-    recoverable::Signature as RecoverableSignature, signature::Signature as NonRecoverableSignature,
-};
+use contract_utils::Dict;
 
 pub struct BridgePool {
     // dictionary to track client conected dictionaries
