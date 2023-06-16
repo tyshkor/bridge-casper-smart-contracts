@@ -259,9 +259,10 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
             amount,
             bridge_pool_instance.get_dict(actor)?,
         )?;
+        let receiver = caller;
         self.emit(BridgePoolEvent::TransferBySignature {
             signer,
-            receiver: caller,
+            receiver,
             token,
             amount,
         });
