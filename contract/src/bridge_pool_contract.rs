@@ -1,3 +1,4 @@
+use crate::address::Address;
 use crate::consts::{AMOUNT, ERC20_ENTRY_POINT_TRANSFER, RECIPIENT};
 use crate::detail;
 use crate::{
@@ -253,11 +254,17 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
                 AMOUNT => amount
             },
         );
+
+        let dict = match client_address {
+            Address::Account(_) => &bridge_pool_instance.account_hash_liquidities_dict,
+            Address::ContractPackage(_) => &bridge_pool_instance.hash_addr_liquidities_dict,
+            Address::ContractHash(_) => return Err(Error::UnexpectedContractHash),
+        };
         bridge_pool_instance.del_liquidity_generic_from_dict(
             token.to_formatted_string(),
             actor.as_account_hash().unwrap().to_string(),
             amount,
-            bridge_pool_instance.get_dict(actor)?,
+            dict,
         )?;
         self.emit(BridgePoolEvent::TransferBySignature {
             signer,

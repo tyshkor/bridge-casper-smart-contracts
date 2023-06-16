@@ -28,11 +28,11 @@ use contract_utils::Dict;
 
 pub struct BridgePool {
     // dictionary to track client conected dictionaries
-    account_hash_liquidities_dict: Dict,
+    pub account_hash_liquidities_dict: Dict,
     // dictionary to track external contracts' conected dictionaries
-    hash_addr_liquidities_dict: Dict,
+    pub hash_addr_liquidities_dict: Dict,
     // dictionary to track allowed targets
-    allowed_targets_dict: Dict,
+    pub allowed_targets_dict: Dict,
     // dictionary to track used hashes
     #[allow(unused)]
     pub used_hashes_dict: Dict,
