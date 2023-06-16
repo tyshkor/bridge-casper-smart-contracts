@@ -154,9 +154,9 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
         amount: U256,
         chain_id: u64,
         salt: String,
-        receiver: String,
-        signature: String,
         caller: String,
+        signature: String,
+        receiver: String,
     ) -> Result<(), Error> {
         let actor = detail::get_immediate_caller_address()
             .unwrap_or_revert_with(Error::ImmediateCallerFail);
@@ -166,7 +166,7 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
 
         let client_address_string: String = client_address.try_into()?;
 
-        if caller != client_address_string {
+        if receiver != client_address_string {
             return Err(Error::WrongCaller);
         }
 
@@ -188,8 +188,8 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
                     token.to_formatted_string().as_bytes(),
                     payee.as_bytes(),
                     amount.to_string().as_bytes(),
-                    receiver.as_bytes(),
                     caller.as_bytes(),
+                    receiver.as_bytes(),
                     &chain_id.to_be_bytes(),
                     &salt,
                 ]
@@ -261,7 +261,7 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
         )?;
         self.emit(BridgePoolEvent::TransferBySignature {
             signer,
-            receiver: caller,
+            receiver,
             token,
             amount,
         });
