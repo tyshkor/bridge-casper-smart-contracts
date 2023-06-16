@@ -267,7 +267,7 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
             .checked_sub(amount)
             .ok_or(Error::CheckedSubFail)?;
         clients_dict.set(client.as_str(), new_amount);
-        let receiver = caller;
+        // let receiver = caller;
         self.emit(BridgePoolEvent::TransferBySignature {
             signer,
             receiver,
