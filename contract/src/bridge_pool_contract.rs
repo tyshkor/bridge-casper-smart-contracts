@@ -261,7 +261,7 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
         )?;
         self.emit(BridgePoolEvent::TransferBySignature {
             signer,
-            receiver,
+            receiver: caller,
             token,
             amount,
         });
