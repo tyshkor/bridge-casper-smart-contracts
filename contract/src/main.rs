@@ -11,7 +11,7 @@ use alloc::{
     string::{String, ToString},
     vec,
 };
-use bridge_pool::bridge_pool_contract::BridgePoolContract;
+use bridge_pool::{bridge_pool_contract::BridgePoolContract, consts::{ENTRY_POINT_CONSTRUCTOR, BRIDGE_POOL_CONTRACT_PACKAGE_HASH, BRIDGE_POOL_PACKAGE_NAME, BRIDGE_POOL_ACCESS_UREF, BRIDGE_POOL_CONTRACT_HASH, TOKEN_ADDRESS, AMOUNT, TARGET_NETWORK, TARGET_TOKEN, TARGET_ADDRESS, TOKEN_NAME, PAYEE, CHAIN_ID, TOKEN_RECIPIENT, CALLER, SIGNATURE, SALT, SIGNER, ENTRY_POINT_SWAP, ENTRY_POINT_REMOVE_LIQUIDITY, ENTRY_POINT_ALLOW_TARGET, ENTRY_POINT_WITHDRAW_SIGNED, ENTRY_POINT_ADD_SIGNER, ENTRY_POINT_REMOVE_SIGNER, ENTRY_POINT_CHECK_SIGNER, CONTRACT_KEY, CONTRACT_VERSION_KEY, ENTRY_POINT_GET_LIQUIDITY, ENTRY_POINT_ADD_LIQUIDITY, CONSTRUCTOR_GROUP, ADMIN_GROUP, ADMIN_ACCESS_UREF}};
 use casper_contract::{
     contract_api::{runtime, storage},
     unwrap_or_revert::UnwrapOrRevert,
@@ -23,41 +23,6 @@ use casper_types::{
 };
 use casper_types::{Group, Key, URef};
 use contract_utils::{ContractContext, OnChainContractStorage};
-
-const ENTRY_POINT_GET_LIQUIDITY: &str = "get_liquidity";
-const ENTRY_POINT_ADD_LIQUIDITY: &str = "add_liquidity";
-const ENTRY_POINT_REMOVE_LIQUIDITY: &str = "remove_liquidity";
-const ENTRY_POINT_SWAP: &str = "swap";
-const ENTRY_POINT_ALLOW_TARGET: &str = "allow_target";
-const ENTRY_POINT_WITHDRAW_SIGNED: &str = "withdraw_signed";
-const ENTRY_POINT_ADD_SIGNER: &str = "add_signer";
-const ENTRY_POINT_REMOVE_SIGNER: &str = "remove_signer";
-const ENTRY_POINT_CONSTRUCTOR: &str = "constructor";
-const ENTRY_POINT_CHECK_SIGNER: &str = "check_signer";
-
-const CONTRACT_VERSION_KEY: &str = "version";
-const CONTRACT_KEY: &str = "bridge_pool";
-const BRIDGE_POOL_CONTRACT_PACKAGE_HASH: &str = "bridge_pool_contract_package_hash";
-const BRIDGE_POOL_CONTRACT_HASH: &str = "bridge_pool_contract_hash";
-const BRIDGE_POOL_PACKAGE_NAME: &str = "bridge_pool_package_name";
-const BRIDGE_POOL_ACCESS_UREF: &str = "bridge_pool_access_uref";
-const AMOUNT: &str = "amount";
-const SIGNER: &str = "signer";
-const TOKEN_ADDRESS: &str = "token_address";
-const TARGET_TOKEN: &str = "target_token";
-const TARGET_ADDRESS: &str = "target_address";
-const TARGET_NETWORK: &str = "target_network";
-const TOKEN_NAME: &str = "token_name";
-const PAYEE: &str = "payee";
-const SALT: &str = "salt";
-const SIGNATURE: &str = "signature";
-const CHAIN_ID: &str = "chain_id";
-const TOKEN_RECIPIENT: &str = "token_recipient";
-const CALLER: &str = "caller";
-
-const CONSTRUCTOR_GROUP: &str = "constructor_group";
-const ADMIN_GROUP: &str = "admin_group";
-const ADMIN_ACCESS_UREF: &str = "admin_access_uref";
 
 #[derive(Default)]
 struct Contract(OnChainContractStorage);

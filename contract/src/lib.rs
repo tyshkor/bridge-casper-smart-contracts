@@ -7,3 +7,4 @@ pub mod data;
 pub mod detail;
 pub mod error;
 pub mod event;
+pub mod consts;

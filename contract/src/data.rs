@@ -1,4 +1,5 @@
-use crate::address::Address;
+use crate::consts::{TOKEN, SIGNER, TARGET_ADDRESS, TARGET_NETWORK, RECEIVER, EVENT_TYPE, EVENT_BRIDGE_LIQUIDITY_REMOVED, ACTOR, EVENT_BRIDGE_TRANSFER_BY_SIGNATURE, EVENT_BRIDGE_SWAP, EVENT_BRIDGE_LIQUIDITY_ADDED, ACCOUNT_HASH_LIQUIDITIES_DICT, HASH_ADDR_LIQUIDITIES_DICT, USED_HASHES_DICT, SIGNERS_DICT, TOKEN_CONTRACT_PACKAGE_HASH_DICT_NAME, ALLOWED_TARGETS_DICT, BRIDGE_POOL_CONTRACT_PACKAGE_HASH, CONTRACT_PACKAGE_HASH, OWNER, RECIPIENT, ERC20_ENTRY_POINT_TRANSFER_FROM, ERC20_ENTRY_POINT_TRANSFER};
+use crate::{address::Address, consts::AMOUNT};
 use crate::alloc::borrow::ToOwned;
 use crate::error::Error;
 use crate::event::BridgePoolEvent;
@@ -21,30 +22,6 @@ use contract_utils::{keccak::keccak256, Dict};
 use k256::ecdsa::{
     recoverable::Signature as RecoverableSignature, signature::Signature as NonRecoverableSignature,
 };
-
-const ACCOUNT_HASH_LIQUIDITIES_DICT: &str = "account_hash_liquidities_dict";
-const HASH_ADDR_LIQUIDITIES_DICT: &str = "hash_addr_liquidities_dict";
-const ALLOWED_TARGETS_DICT: &str = "allowed_targets_dict";
-const USED_HASHES_DICT: &str = "used_hashes_dict";
-const SIGNERS_DICT: &str = "signers_dict";
-const TOKEN_CONTRACT_PACKAGE_HASH_DICT_NAME: &str = "token_contract_package_hash_dict_name";
-const BRIDGE_POOL_CONTRACT_PACKAGE_HASH: &str = "bridge_pool_contract_package_hash";
-
-const CONTRACT_PACKAGE_HASH: &str = "contract_package_hash";
-
-const AMOUNT: &str = "amount";
-const SIGNER: &str = "signer";
-const TARGET_NETWORK: &str = "target_network";
-const TARGET_ADDRESS: &str = "target_address";
-const TOKEN: &str = "token";
-const RECEIVER: &str = "receiver";
-const ACTOR: &str = "actor";
-const EVENT_TYPE: &str = "event_type";
-
-const BRIDGE_LIQUIDITY_ADDED: &str = "bridge_liquidity_added";
-const BRIDGE_LIQUIDITY_REMOVED: &str = "bridge_liquidity_removed";
-const BRIDGE_SWAP: &str = "bridge_swap";
-const BRIDGE_TRANSFER_BY_SIGNATURE: &str = "bridge_transfer_by_signature";
 
 pub struct BridgePool {
     // dictionary to track client conected dictionaries
@@ -325,11 +302,11 @@ impl BridgePool {
     // pay from any address to any address. Remember to approve the tokens beforehand
     fn pay_to(&self, token: ContractPackageHash, owner: Address, recipient: Address, amount: U256) {
         let args = runtime_args! {
-            "owner" => owner,
-            "recipient" => recipient,
+            OWNER => owner,
+            RECIPIENT => recipient,
             AMOUNT => amount
         };
-        runtime::call_versioned_contract::<()>(token, None, "transfer_from", args);
+        runtime::call_versioned_contract::<()>(token, None, ERC20_ENTRY_POINT_TRANSFER_FROM, args);
     }
 
     // pay from any address to this contract. Remember to approve the tokens beforehand
@@ -349,10 +326,10 @@ impl BridgePool {
 
     fn pay_from_me(&self, token: ContractPackageHash, recipient: Address, amount: U256) {
         let args = runtime_args! {
-            "recipient" => recipient,
+            RECIPIENT => recipient,
             AMOUNT => amount
         };
-        runtime::call_versioned_contract::<()>(token, None, "transfer", args);
+        runtime::call_versioned_contract::<()>(token, None, ERC20_ENTRY_POINT_TRANSFER, args);
     }
 
     pub fn get_dict(&self, client_address: Address) -> Result<&Dict, Error> {
@@ -390,7 +367,7 @@ pub fn emit(event: &BridgePoolEvent) {
         } => {
             let mut param = BTreeMap::new();
             param.insert(CONTRACT_PACKAGE_HASH, package.to_string());
-            param.insert(EVENT_TYPE, BRIDGE_LIQUIDITY_ADDED.to_string());
+            param.insert(EVENT_TYPE, EVENT_BRIDGE_LIQUIDITY_ADDED.to_string());
             param.insert(ACTOR, (*actor).try_into().unwrap());
             param.insert(TOKEN, token.to_string());
             param.insert(AMOUNT, amount.to_string());
@@ -403,7 +380,7 @@ pub fn emit(event: &BridgePoolEvent) {
         } => {
             let mut param = BTreeMap::new();
             param.insert(CONTRACT_PACKAGE_HASH, package.to_string());
-            param.insert(EVENT_TYPE, BRIDGE_LIQUIDITY_REMOVED.to_string());
+            param.insert(EVENT_TYPE, EVENT_BRIDGE_LIQUIDITY_REMOVED.to_string());
             param.insert(ACTOR, (*actor).try_into().unwrap());
             param.insert(TOKEN, token.to_string());
             param.insert(AMOUNT, amount.to_string());
@@ -418,7 +395,7 @@ pub fn emit(event: &BridgePoolEvent) {
         } => {
             let mut param = BTreeMap::new();
             param.insert(CONTRACT_PACKAGE_HASH, package.to_string());
-            param.insert(EVENT_TYPE, BRIDGE_SWAP.to_string());
+            param.insert(EVENT_TYPE, EVENT_BRIDGE_SWAP.to_string());
             param.insert(ACTOR, (*actor).try_into().unwrap());
             param.insert(TOKEN, token.to_string());
             param.insert(TARGET_NETWORK, target_network.to_string());
@@ -434,7 +411,7 @@ pub fn emit(event: &BridgePoolEvent) {
         } => {
             let mut param = BTreeMap::new();
             param.insert(CONTRACT_PACKAGE_HASH, package.to_string());
-            param.insert(EVENT_TYPE, BRIDGE_TRANSFER_BY_SIGNATURE.to_string());
+            param.insert(EVENT_TYPE, EVENT_BRIDGE_TRANSFER_BY_SIGNATURE.to_string());
             param.insert(SIGNER, signer.clone());
             param.insert(TOKEN, token.to_string());
             param.insert(RECEIVER, receiver.to_string());
