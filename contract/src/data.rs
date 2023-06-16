@@ -163,6 +163,7 @@ impl BridgePool {
     }
 
     // generic function to handle the case of a client and a contract when removing liquidity
+    #[inline(always)]
     pub fn del_liquidity_generic_from_dict(
         &self,
         token_contract_hash: String,
