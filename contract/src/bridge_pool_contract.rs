@@ -1,4 +1,4 @@
-use crate::consts::{ERC20_ENTRY_POINT_TRANSFER, RECIPIENT, AMOUNT};
+use crate::consts::{AMOUNT, ERC20_ENTRY_POINT_TRANSFER, RECIPIENT};
 use crate::detail;
 use crate::{
     data::{self, BridgePool},
