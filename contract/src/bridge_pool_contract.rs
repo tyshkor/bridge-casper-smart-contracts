@@ -1,3 +1,4 @@
+use crate::address::Address;
 use crate::consts::{AMOUNT, ERC20_ENTRY_POINT_TRANSFER, RECIPIENT};
 use crate::detail;
 use crate::{
@@ -12,7 +13,7 @@ use casper_contract::unwrap_or_revert::UnwrapOrRevert;
 use casper_types::RuntimeArgs;
 use casper_types::{runtime_args, ContractPackageHash, U256};
 use contract_utils::keccak::{keccak256, keccak256_hash};
-use contract_utils::{ContractContext, ContractStorage};
+use contract_utils::{ContractContext, ContractStorage, Dict};
 use k256::ecdsa::{
     recoverable::Signature as RecoverableSignature, signature::Signature as NonRecoverableSignature,
 };
@@ -154,9 +155,9 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
         amount: U256,
         chain_id: u64,
         salt: String,
-        receiver: String,
-        signature: String,
         caller: String,
+        signature: String,
+        receiver: String,
     ) -> Result<(), Error> {
         let actor = detail::get_immediate_caller_address()
             .unwrap_or_revert_with(Error::ImmediateCallerFail);
@@ -166,7 +167,7 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
 
         let client_address_string: String = client_address.try_into()?;
 
-        if caller != client_address_string {
+        if receiver != client_address_string {
             return Err(Error::WrongCaller);
         }
 
@@ -188,8 +189,8 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
                     token.to_formatted_string().as_bytes(),
                     payee.as_bytes(),
                     amount.to_string().as_bytes(),
-                    receiver.as_bytes(),
                     caller.as_bytes(),
+                    receiver.as_bytes(),
                     &chain_id.to_be_bytes(),
                     &salt,
                 ]
@@ -253,12 +254,27 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
                 AMOUNT => amount
             },
         );
-        bridge_pool_instance.del_liquidity_generic_from_dict(
-            token.to_formatted_string(),
-            actor.as_account_hash().unwrap().to_string(),
-            amount,
-            bridge_pool_instance.get_dict(actor)?,
-        )?;
+
+        let dict = match client_address {
+            Address::Account(_) => &bridge_pool_instance.account_hash_liquidities_dict,
+            Address::ContractPackage(_) => &bridge_pool_instance.hash_addr_liquidities_dict,
+            Address::ContractHash(_) => return Err(Error::UnexpectedContractHash),
+        };
+
+        let client = actor.as_account_hash().unwrap().to_string();
+
+        let clients_dict_address = dict
+            .get::<String>(token.to_formatted_string().as_str())
+            .ok_or(Error::ClientDoesNotHaveAnyKindOfLiquidity)?;
+        let clients_dict = Dict::instance(clients_dict_address.as_str());
+        let client_amount = clients_dict
+            .get::<U256>(client.as_str())
+            .ok_or(Error::ClientDoesNotHaveSpecificKindOfLiquidity)?;
+        let new_amount = client_amount
+            .checked_sub(amount)
+            .ok_or(Error::CheckedSubFail)?;
+        clients_dict.set(client.as_str(), new_amount);
+
         self.emit(BridgePoolEvent::TransferBySignature {
             signer,
             receiver,
