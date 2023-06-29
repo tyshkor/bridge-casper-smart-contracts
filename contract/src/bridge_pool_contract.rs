@@ -162,10 +162,7 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
         let actor = detail::get_immediate_caller_address()
             .unwrap_or_revert_with(Error::ImmediateCallerFail);
 
-        let client_address = detail::get_immediate_caller_address()
-            .unwrap_or_revert_with(Error::ImmediateCallerFail);
-
-        let client_address_string: String = client_address.try_into()?;
+        let client_address_string: String = actor.try_into()?;
 
         if receiver != client_address_string {
             return Err(Error::WrongCaller);
@@ -244,13 +241,12 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
             return Err(Error::InvalidSigner);
         }
 
-        let client_addr = actor;
         runtime::call_versioned_contract::<()>(
             token,
             None,
             ERC20_ENTRY_POINT_TRANSFER,
             runtime_args! {
-                RECIPIENT => client_addr,
+                RECIPIENT => actor,
                 AMOUNT => amount
             },
         );
