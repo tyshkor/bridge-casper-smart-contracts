@@ -251,7 +251,7 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
             },
         );
 
-        let dict = match client_address {
+        let dict = match actor {
             Address::Account(_) => &bridge_pool_instance.account_hash_liquidities_dict,
             Address::ContractPackage(_) => &bridge_pool_instance.hash_addr_liquidities_dict,
             Address::ContractHash(_) => return Err(Error::UnexpectedContractHash),
