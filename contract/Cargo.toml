@@ -5,15 +5,15 @@ authors = ["CasperLabs <https://discord.com/invite/Q38s3Vh>"]
 edition = "2021"
 
 [dependencies]
-casper-contract = "1.4.4"
-casper-types = "1.5.0"
+casper-contract = "3.0.0"
+casper-types = "3.0.0"
 contract-utils = { path = "../utils/contract-utils" }
 k256 = { version = "0.7.3", default-features = false, features = ["ecdsa", "zeroize", "keccak256"] }
 sha3 = "*"
 hex = "0.4.3"
-ecdsa = "0.10.2"
-secp256k1 = {version = "0.22", features = ["recovery"] }
+secp256k1 = {version = "0.27", features = ["recovery"] }
 tiny-keccak = { version = "2.0", features = ["keccak"] }
+getrandom = { version = "=0.2.7", features = ["js"]}
 
 [[bin]]
 name = "bridge_pool"
@@ -26,6 +26,6 @@ test = false
 
 [features]
 default = ["std"]
-std = ["casper-contract/std", "casper-types/std"]
+std = ["casper-contract/std"]
 
 # default = []

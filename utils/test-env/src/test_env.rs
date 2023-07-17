@@ -1,6 +1,6 @@
 use std::sync::{Arc, Mutex};
 
-use casper_engine_test_support::{InMemoryWasmTestBuilder, DEFAULT_RUN_GENESIS_REQUEST};
+use casper_engine_test_support::{InMemoryWasmTestBuilder, PRODUCTION_RUN_GENESIS_REQUEST};
 use casper_types::{
     account::AccountHash, bytesrepr::FromBytes, CLTyped, Key, PublicKey, RuntimeArgs, SecretKey,
 };
@@ -72,7 +72,7 @@ struct TestEnvState {
 impl TestEnvState {
     pub fn new() -> TestEnvState {
         let mut builder = InMemoryWasmTestBuilder::default();
-        builder.run_genesis(&DEFAULT_RUN_GENESIS_REQUEST).commit();
+        builder.run_genesis(&PRODUCTION_RUN_GENESIS_REQUEST).commit();
         let mut accounts = Vec::new();
         for i in 0..10u8 {
             let secret_key: SecretKey = SecretKey::ed25519_from_bytes([i; 32]).unwrap();
@@ -90,7 +90,7 @@ impl TestEnvState {
 
     pub fn _new_with_users(user_secrets: &[[u8; 32]]) -> TestEnvState {
         let mut builder = InMemoryWasmTestBuilder::default();
-        builder.run_genesis(&DEFAULT_RUN_GENESIS_REQUEST).commit();
+        builder.run_genesis(&PRODUCTION_RUN_GENESIS_REQUEST).commit();
 
         let mut accounts = Vec::new();
         for user_secret in user_secrets {

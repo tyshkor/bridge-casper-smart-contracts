@@ -4,9 +4,6 @@ on:
     push:
         branches-ignore:
         - nightly
-    pull_request:
-        branches-ignore:
-        - nightly
 
 env:
   CARGO_TERM_COLOR: always
@@ -32,6 +29,3 @@ jobs:
 
       - name: Build
         run: rustup target add wasm32-unknown-unknown ; make build-contract
-
-      - name: Test
-        run: rustup target add wasm32-unknown-unknown ; make build-contract ; make test

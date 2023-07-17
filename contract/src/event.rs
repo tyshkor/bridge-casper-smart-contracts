@@ -20,15 +20,14 @@ pub enum BridgePoolEvent {
         actor: Address,
         token: ContractPackageHash,
         target_network: U256,
-        target_token: String,
         // client address
-        target_address: Address,
+        target_address: String,
         amount: U256,
     },
     // event dispatched in case of transfer by signature has happened
     TransferBySignature {
-        signer: Address,
-        reciever: String,
+        signer: String,
+        receiver: String,
         token: ContractPackageHash,
         amount: U256,
     },

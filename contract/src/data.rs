@@ -1,7 +1,15 @@
-use crate::address::Address;
 use crate::alloc::borrow::ToOwned;
+use crate::consts::{
+    ACCOUNT_HASH_LIQUIDITIES_DICT, ACTOR, ALLOWED_TARGETS_DICT, BRIDGE_POOL_CONTRACT_PACKAGE_HASH,
+    CONTRACT_PACKAGE_HASH, ERC20_ENTRY_POINT_TRANSFER, ERC20_ENTRY_POINT_TRANSFER_FROM,
+    EVENT_BRIDGE_LIQUIDITY_ADDED, EVENT_BRIDGE_LIQUIDITY_REMOVED, EVENT_BRIDGE_SWAP,
+    EVENT_BRIDGE_TRANSFER_BY_SIGNATURE, EVENT_TYPE, HASH_ADDR_LIQUIDITIES_DICT, OWNER, RECEIVER,
+    RECIPIENT, SIGNER, SIGNERS_DICT, TARGET_ADDRESS, TARGET_NETWORK, TOKEN,
+    TOKEN_CONTRACT_PACKAGE_HASH_DICT_NAME, USED_HASHES_DICT,
+};
 use crate::error::Error;
 use crate::event::BridgePoolEvent;
+use crate::{address::Address, consts::AMOUNT};
 use alloc::{
     collections::BTreeMap,
     string::{String, ToString},
@@ -16,42 +24,26 @@ use casper_contract::{
 };
 use casper_types::RuntimeArgs;
 use casper_types::{runtime_args, system::CallStackElement, ContractPackageHash, URef, U256};
-use contract_utils::{get_key, set_key, Dict};
+use contract_utils::Dict;
 
-use k256::ecdsa::{
-    recoverable::Signature as RecoverableSignature, signature::Signature as NonRecoverableSignature,
-};
-
-const ACCOUNT_HASH_LIQUIDITIES_DICT: &str = "account_hash_liquidities_dict";
-const HASH_ADDR_LIQUIDITIES_DICT: &str = "hash_addr_liquidities_dict";
-const ALLOWED_TARGETS_DICT: &str = "allowed_targets_dict";
-const USED_HASHES_DICT: &str = "used_hashes_dict";
-const SIGNERS_DICT: &str = "signers_dict";
-const TOKEN_CONTRACT_PACKAGE_HASH_DICT_NAME: &str = "token_contract_package_hash_dict_name";
-
-const CONTRACT_PACKAGE_HASH: &str = "contract_package_hash";
-
-const NAME: &str = "name";
-const ADDRESS: &str = "address";
-
-pub struct BrigdePool {
+pub struct BridgePool {
     // dictionary to track client conected dictionaries
-    account_hash_liquidities_dict: Dict,
+    pub account_hash_liquidities_dict: Dict,
     // dictionary to track external contracts' conected dictionaries
-    hash_addr_liquidities_dict: Dict,
+    pub hash_addr_liquidities_dict: Dict,
     // dictionary to track allowed targets
-    allowed_targets_dict: Dict,
+    pub allowed_targets_dict: Dict,
     // dictionary to track used hashes
     #[allow(unused)]
-    used_hashes_dict: Dict,
+    pub used_hashes_dict: Dict,
     // dictionary to track signers
-    signers_dict: Dict,
+    pub signers_dict: Dict,
     token_contract_package_hash_dict_name: Dict,
 }
 
-impl BrigdePool {
-    pub fn instance() -> BrigdePool {
-        BrigdePool {
+impl BridgePool {
+    pub fn instance() -> BridgePool {
+        BridgePool {
             account_hash_liquidities_dict: Dict::instance(ACCOUNT_HASH_LIQUIDITIES_DICT),
             hash_addr_liquidities_dict: Dict::instance(HASH_ADDR_LIQUIDITIES_DICT),
             allowed_targets_dict: Dict::instance(ALLOWED_TARGETS_DICT),
@@ -79,19 +71,14 @@ impl BrigdePool {
         client_address: Address,
     ) -> Result<U256, Error> {
         let client_string: String = TryInto::try_into(client_address)?;
-        let dict = match client_address {
-            Address::Account(_) => &self.account_hash_liquidities_dict,
-            Address::ContractPackage(_) => &self.hash_addr_liquidities_dict,
-            Address::ContractHash(_) => return Err(Error::UnexpectedContractHash),
-        };
-        Ok(self.get_liquidity_added_by_client_genric(
+        Ok(self.get_liquidity_added_by_client_generic(
             token_contract_hash.to_string(),
             client_string,
-            dict,
+            self.get_dict(client_address)?,
         ))
     }
 
-    pub fn get_liquidity_added_by_client_genric(
+    pub fn get_liquidity_added_by_client_generic(
         &self,
         token_contract_hash: String,
         client: String,
@@ -123,16 +110,11 @@ impl BrigdePool {
         );
 
         let client_string: String = TryInto::try_into(client_address)?;
-        let dict = match client_address {
-            Address::Account(_) => &self.account_hash_liquidities_dict,
-            Address::ContractPackage(_) => &self.hash_addr_liquidities_dict,
-            Address::ContractHash(_) => return Err(Error::UnexpectedContractHash),
-        };
         self.add_liquidity_generic(
-            token_contract_package_hash.to_string(),
+            token_contract_package_hash.to_formatted_string(),
             client_string,
             amount,
-            dict,
+            self.get_dict(client_address)?,
         );
 
         Ok(())
@@ -171,22 +153,17 @@ impl BrigdePool {
     ) -> Result<(), Error> {
         let client_string: String = TryInto::try_into(client_address)?;
         self.pay_from_me(token_contract_package_hash, client_address, amount);
-        let dict = match client_address {
-            Address::Account(_) => &self.account_hash_liquidities_dict,
-            Address::ContractPackage(_) => &self.hash_addr_liquidities_dict,
-            Address::ContractHash(_) => return Err(Error::UnexpectedContractHash),
-        };
-        self.remove_liquidity_generic(
-            token_contract_package_hash.to_string(),
+        self.del_liquidity_generic_from_dict(
+            token_contract_package_hash.to_formatted_string(),
             client_string,
             amount,
-            dict,
+            self.get_dict(client_address)?,
         )?;
         Ok(())
     }
 
     // generic function to handle the case of a client and a contract when removing liquidity
-    fn remove_liquidity_generic(
+    pub fn del_liquidity_generic_from_dict(
         &self,
         token_contract_hash: String,
         client: String,
@@ -203,34 +180,11 @@ impl BrigdePool {
                     Err(Error::CheckedSubFail)
                 }
             } else {
-                Err(Error::ClientDoesNotHaveSpecificKindOfLioquidity)
+                Err(Error::ClientDoesNotHaveSpecificKindOfLiquidity)
             }
         } else {
-            Err(Error::ClientDoesNotHaveAnyKindOfLioquidity)
+            Err(Error::ClientDoesNotHaveAnyKindOfLiquidity)
         }
-    }
-
-    // withdraw liquidity from pool
-    pub fn withdraw(
-        &self,
-        token_contract_package_hash: ContractPackageHash,
-        client_address: Address,
-        amount: U256,
-    ) -> Result<(), Error> {
-        let client_string: String = TryInto::try_into(client_address)?;
-        self.pay_from_me(token_contract_package_hash, client_address, amount);
-        let dict = match client_address {
-            Address::Account(_) => &self.account_hash_liquidities_dict,
-            Address::ContractPackage(_) => &self.hash_addr_liquidities_dict,
-            Address::ContractHash(_) => return Err(Error::UnexpectedContractHash),
-        };
-        self.remove_liquidity_generic(
-            token_contract_package_hash.to_string(),
-            client_string,
-            amount,
-            dict,
-        )?;
-        Ok(())
     }
 
     // function to add signer
@@ -238,99 +192,17 @@ impl BrigdePool {
         self.signers_dict.set(&signer, true)
     }
 
-    // withdraw liquidity from pool securely
-    pub fn withdraw_signed(
-        &self,
-        token_contract_package_hash: ContractPackageHash,
-        payee: Address,
-        amount: U256,
-        _salt: [u8; 32],
-        signature: alloc::vec::Vec<u8>,
-        message_hash: String,
-    ) -> Result<(), Error> {
-        let payee_string = payee.as_account_hash().unwrap().to_string();
-        let signer = self.signer_unique(message_hash, signature)?;
-        let signer_string = hex::encode(signer);
+    // function to remvoe signer
+    pub fn remove_signer(&self, signer: String) {
+        self.signers_dict.remove::<bool>(&signer)
+    }
 
-        if !self
+    pub fn check_signer(&self, signer: String) -> Result<bool, Error> {
+        let res = self
             .signers_dict
-            .get::<bool>(&signer_string)
-            .ok_or(Error::NoValueInSignersDict)?
-        {
-            return Err(Error::InvalidSigner);
-        }
-        self.pay_from_me(token_contract_package_hash, payee, amount);
-        let dict = match payee {
-            Address::Account(_) => &self.account_hash_liquidities_dict,
-            Address::ContractPackage(_) => &self.hash_addr_liquidities_dict,
-            Address::ContractHash(_) => return Err(Error::UnexpectedContractHash),
-        };
-        self.remove_liquidity_generic(
-            token_contract_package_hash.to_string(),
-            payee_string,
-            amount,
-            dict,
-        )?;
-        Ok(())
-    }
-
-    // function to build signed message
-    pub fn withdraw_signed_message(
-        &self,
-        token_contract_package_hash: ContractPackageHash,
-        payee: String,
-        amount: U256,
-        salt: [u8; 32],
-    ) -> [u8; 32] {
-        let contract_package_hash_bytes = token_contract_package_hash.as_bytes();
-        let payee_bytes = payee.as_bytes();
-        let amount_string = amount.to_string();
-        let amount_bytes = amount_string.as_bytes();
-
-        let concatenated: Vec<u8> = [
-            contract_package_hash_bytes,
-            payee_bytes,
-            amount_bytes,
-            &salt[..],
-        ]
-        .concat();
-        let data = &concatenated[..];
-        contract_utils::keccak::keccak256(data)
-    }
-
-    pub fn signer_unique(
-        &self,
-        message_hash: String,
-        signature: alloc::vec::Vec<u8>,
-    ) -> Result<Vec<u8>, Error> {
-        let signature_rec = if signature.len() == 65 {
-            let mut signature_vec: Vec<u8> = signature;
-            signature_vec[64] -= 27;
-            RecoverableSignature::from_bytes(&signature_vec[..])
-                .map_err(|_| Error::RecoverableSignatureTryFromFail)?
-        } else {
-            NonRecoverableSignature::from_bytes(&signature[..])
-                .map_err(|_| Error::NonRecoverableSignatureTryFromFail)?
-        };
-
-        let message_hash_bytes =
-            hex::decode(message_hash.clone()).map_err(|_| Error::MessageHashHexDecodingFail)?;
-
-        let public_key =
-            contract_utils::keccak::ecdsa_recover(&message_hash_bytes[..], &signature_rec)
-                .map_err(|_| Error::EcdsaPublicKeyRecoveryFail)?;
-
-        if self
-            .hash_addr_liquidities_dict
-            .get::<bool>(message_hash.as_str())
-            .is_some()
-        {
-            return Err(Error::MessageAlreadyUsed);
-        } else {
-            self.hash_addr_liquidities_dict
-                .set(message_hash.as_str(), true);
-        }
-        Ok(public_key)
+            .get::<bool>(&signer)
+            .ok_or(Error::NoValueInSignersDict)?;
+        Ok(res)
     }
 
     // function to swap tokens from different pools
@@ -433,21 +305,20 @@ impl BrigdePool {
     // pay from any address to any address. Remember to approve the tokens beforehand
     fn pay_to(&self, token: ContractPackageHash, owner: Address, recipient: Address, amount: U256) {
         let args = runtime_args! {
-            "owner" => owner,
-            "recipient" => recipient,
-            "amount" => amount
+            OWNER => owner,
+            RECIPIENT => recipient,
+            AMOUNT => amount
         };
-        runtime::call_versioned_contract::<()>(token, None, "transfer_from", args);
+        runtime::call_versioned_contract::<()>(token, None, ERC20_ENTRY_POINT_TRANSFER_FROM, args);
     }
 
     // pay from any address to this contract. Remember to approve the tokens beforehand
     fn pay_me(&self, token: ContractPackageHash, spender: Address, amount: U256) {
-        let bridge_pool_contract_package_hash =
-            runtime::get_key("bridge_pool_contract_package_hash")
-                .unwrap_or_revert_with(Error::MissingContractPackageHash)
-                .into_hash()
-                .map(ContractPackageHash::new)
-                .unwrap_or_revert_with(Error::InvalidContractPackageHash);
+        let bridge_pool_contract_package_hash = runtime::get_key(BRIDGE_POOL_CONTRACT_PACKAGE_HASH)
+            .unwrap_or_revert_with(Error::MissingContractPackageHash)
+            .into_hash()
+            .map(ContractPackageHash::new)
+            .unwrap_or_revert_with(Error::InvalidContractPackageHash);
         self.pay_to(
             token,
             spender,
@@ -457,41 +328,20 @@ impl BrigdePool {
     }
 
     fn pay_from_me(&self, token: ContractPackageHash, recipient: Address, amount: U256) {
-        // let bridge_pool_contract_package_hash =
-        //     runtime::get_key("bridge_pool_contract_package_hash")
-        //         .unwrap_or_revert_with(Error::MissingContractPackageHash)
-        //         .into_hash()
-        //         .map(|hash_address| ContractPackageHash::new(hash_address))
-        //         .unwrap_or_revert_with(Error::InvalidContractPackageHash);
-        // self.approve_spender(token, recipient, amount);
-        // self.pay_to(
-        //     token,
-        //     crate::address::Address::ContractPackage(bridge_pool_contract_package_hash),
-        //     recipient,
-        //     amount,
-        // )
         let args = runtime_args! {
-            "recipient" => recipient,
-            "amount" => amount
+            RECIPIENT => recipient,
+            AMOUNT => amount
         };
-        runtime::call_versioned_contract::<()>(token, None, "transfer", args);
+        runtime::call_versioned_contract::<()>(token, None, ERC20_ENTRY_POINT_TRANSFER, args);
     }
-}
 
-pub fn name() -> String {
-    get_key(NAME).unwrap_or_revert()
-}
-
-pub fn set_name(name: String) {
-    set_key(NAME, name);
-}
-
-pub fn address() -> String {
-    get_key(ADDRESS).unwrap_or_revert()
-}
-
-pub fn set_address(address: String) {
-    set_key(ADDRESS, address);
+    pub fn get_dict(&self, client_address: Address) -> Result<&Dict, Error> {
+        match client_address {
+            Address::Account(_) => Ok(&self.account_hash_liquidities_dict),
+            Address::ContractPackage(_) => Ok(&self.hash_addr_liquidities_dict),
+            Address::ContractHash(_) => Err(Error::UnexpectedContractHash),
+        }
+    }
 }
 
 // function to return contract package hash in case it's possible
@@ -520,17 +370,10 @@ pub fn emit(event: &BridgePoolEvent) {
         } => {
             let mut param = BTreeMap::new();
             param.insert(CONTRACT_PACKAGE_HASH, package.to_string());
-            param.insert("event_type", "bridge_liquidity_added".to_string());
-            if actor.as_account_hash().is_some() {
-                param.insert("actor", actor.as_account_hash().unwrap().to_string());
-            } else {
-                param.insert(
-                    "actor",
-                    actor.as_contract_package_hash().unwrap().to_string(),
-                );
-            };
-            param.insert("token", token.to_string());
-            param.insert("amount", amount.to_string());
+            param.insert(EVENT_TYPE, EVENT_BRIDGE_LIQUIDITY_ADDED.to_string());
+            param.insert(ACTOR, (*actor).try_into().unwrap());
+            param.insert(TOKEN, token.to_string());
+            param.insert(AMOUNT, amount.to_string());
             events.push(param);
         }
         BridgePoolEvent::BridgeLiquidityRemoved {
@@ -540,74 +383,46 @@ pub fn emit(event: &BridgePoolEvent) {
         } => {
             let mut param = BTreeMap::new();
             param.insert(CONTRACT_PACKAGE_HASH, package.to_string());
-            param.insert("event_type", "bridge_liquidity_removed".to_string());
-            if actor.as_account_hash().is_some() {
-                param.insert("actor", actor.as_account_hash().unwrap().to_string());
-            } else {
-                param.insert(
-                    "actor",
-                    actor.as_contract_package_hash().unwrap().to_string(),
-                );
-            };
-            param.insert("token", token.to_string());
-            param.insert("amount", amount.to_string());
+            param.insert(EVENT_TYPE, EVENT_BRIDGE_LIQUIDITY_REMOVED.to_string());
+            param.insert(ACTOR, (*actor).try_into().unwrap());
+            param.insert(TOKEN, token.to_string());
+            param.insert(AMOUNT, amount.to_string());
             events.push(param);
         }
         BridgePoolEvent::BridgeSwap {
             actor,
             token,
             target_network,
-            target_token,
             target_address,
             amount,
         } => {
             let mut param = BTreeMap::new();
             param.insert(CONTRACT_PACKAGE_HASH, package.to_string());
-            param.insert("event_type", "bridge_swap".to_string());
-            if actor.as_account_hash().is_some() {
-                param.insert("actor", actor.as_account_hash().unwrap().to_string());
-            } else {
-                param.insert(
-                    "actor",
-                    actor.as_contract_package_hash().unwrap().to_string(),
-                );
-            };
-            param.insert("token", token.to_string());
-            param.insert("target_network", target_network.to_string());
-            param.insert("target_token", target_token.to_string());
-            if target_address.as_account_hash().is_some() {
-                param.insert(
-                    "target_address",
-                    target_address.as_account_hash().unwrap().to_string(),
-                );
-            } else {
-                param.insert(
-                    "target_address",
-                    target_address
-                        .as_contract_package_hash()
-                        .unwrap()
-                        .to_string(),
-                );
-            };
-            param.insert("amount", amount.to_string());
+            param.insert(EVENT_TYPE, EVENT_BRIDGE_SWAP.to_string());
+            param.insert(ACTOR, (*actor).try_into().unwrap());
+            param.insert(TOKEN, token.to_string());
+            param.insert(TARGET_NETWORK, target_network.to_string());
+            param.insert(TARGET_ADDRESS, target_address.clone());
+            param.insert(AMOUNT, amount.to_string());
             events.push(param);
         }
         BridgePoolEvent::TransferBySignature {
             signer,
-            reciever,
+            receiver,
             token,
             amount,
         } => {
             let mut param = BTreeMap::new();
             param.insert(CONTRACT_PACKAGE_HASH, package.to_string());
-            param.insert("event_type", "bridge_transfer_by_signature".to_string());
-            param.insert("signer", signer.as_account_hash().unwrap().to_string());
-            param.insert("token", token.to_string());
-            param.insert("reciever", reciever.to_string());
-            param.insert("amount", amount.to_string());
+            param.insert(EVENT_TYPE, EVENT_BRIDGE_TRANSFER_BY_SIGNATURE.to_string());
+            param.insert(SIGNER, signer.clone());
+            param.insert(TOKEN, token.to_string());
+            param.insert(RECEIVER, receiver.to_string());
+            param.insert(AMOUNT, amount.to_string());
             events.push(param);
         }
     };
+
     for param in events {
         let _: URef = storage::new_uref(param);
     }
