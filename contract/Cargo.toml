@@ -23,6 +23,8 @@ doctest = false
 test = false
 
 [profile.release] #reduces Wasm size
+codegen-units = 1
+lto = true
 
 [features]
 default = ["std"]

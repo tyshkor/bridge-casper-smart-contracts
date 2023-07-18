@@ -12,3 +12,7 @@ casper-types = "3.0.0"
 
 [features]
 default = ["casper-contract/std", "casper-types/std", "casper-engine-test-support/test-support", "casper-contract/test-support"]
+
+[profile.release] #reduces Wasm size
+codegen-units = 1
+lto = true
