@@ -46,6 +46,10 @@ pub enum Error {
     SignerWrongFormat = 41,
     MessageHashNotEqualToGenerated = 42,
     WrongCaller = 43,
+    NotAnAdmin = 44,
+    InvalidAccountHash = 45,
+    MissingAccountHash = 46,
+    AdminDoesNotHaveSpecificKindOfLiquidity = 47,
 }
 
 impl From<Error> for ApiError {

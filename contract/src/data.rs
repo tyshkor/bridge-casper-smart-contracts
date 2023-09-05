@@ -5,7 +5,7 @@ use crate::consts::{
     EVENT_BRIDGE_LIQUIDITY_ADDED, EVENT_BRIDGE_LIQUIDITY_REMOVED, EVENT_BRIDGE_SWAP,
     EVENT_BRIDGE_TRANSFER_BY_SIGNATURE, EVENT_TYPE, HASH_ADDR_LIQUIDITIES_DICT, OWNER, RECEIVER,
     RECIPIENT, SIGNER, SIGNERS_DICT, TARGET_ADDRESS, TARGET_NETWORK, TOKEN,
-    TOKEN_CONTRACT_PACKAGE_HASH_DICT_NAME, USED_HASHES_DICT,
+    TOKEN_CONTRACT_PACKAGE_HASH_DICT_NAME, USED_HASHES_DICT, ADMIN_LIQUIDITIES_DICT, EVENT_BRIDGE_LIQUIDITY_ADDED_BY_ADMIN, EVENT_BRIDGE_SWAP_TO, ADMIN_ADDRESS,
 };
 use crate::error::Error;
 use crate::event::BridgePoolEvent;
@@ -23,6 +23,7 @@ use casper_contract::{
     unwrap_or_revert::UnwrapOrRevert,
 };
 use casper_types::RuntimeArgs;
+use casper_types::account::AccountHash;
 use casper_types::{runtime_args, system::CallStackElement, ContractPackageHash, URef, U256};
 use contract_utils::Dict;
 
@@ -31,6 +32,8 @@ pub struct BridgePool {
     pub account_hash_liquidities_dict: Dict,
     // dictionary to track external contracts' conected dictionaries
     pub hash_addr_liquidities_dict: Dict,
+    // dictionary to track bridge liquidity
+    pub admin_liquidities_dict: Dict,
     // dictionary to track allowed targets
     pub allowed_targets_dict: Dict,
     // dictionary to track used hashes
@@ -46,6 +49,7 @@ impl BridgePool {
         BridgePool {
             account_hash_liquidities_dict: Dict::instance(ACCOUNT_HASH_LIQUIDITIES_DICT),
             hash_addr_liquidities_dict: Dict::instance(HASH_ADDR_LIQUIDITIES_DICT),
+            admin_liquidities_dict: Dict::instance(ADMIN_LIQUIDITIES_DICT),
             allowed_targets_dict: Dict::instance(ALLOWED_TARGETS_DICT),
             used_hashes_dict: Dict::instance(USED_HASHES_DICT),
             signers_dict: Dict::instance(SIGNERS_DICT),
@@ -58,6 +62,7 @@ impl BridgePool {
     pub fn init() {
         Dict::init(ACCOUNT_HASH_LIQUIDITIES_DICT);
         Dict::init(HASH_ADDR_LIQUIDITIES_DICT);
+        Dict::init(ADMIN_LIQUIDITIES_DICT);
         Dict::init(ALLOWED_TARGETS_DICT);
         Dict::init(USED_HASHES_DICT);
         Dict::init(SIGNERS_DICT);
@@ -111,11 +116,41 @@ impl BridgePool {
 
         let client_string: String = TryInto::try_into(client_address)?;
         self.add_liquidity_generic(
-            token_contract_package_hash.to_formatted_string(),
+            token_contract_package_hash.to_string(),
             client_string,
             amount,
             self.get_dict(client_address)?,
         );
+
+        Ok(())
+    }
+
+    // admin add liquidity
+    pub fn admin_add_liquidity(
+        &self,
+        bridge_pool_contract_package_hash: ContractPackageHash,
+        token_contract_package_hash: ContractPackageHash,
+        admin_address: Address,
+        amount: U256,
+    ) -> Result<(), Error> {
+        self.is_admin(admin_address)?;
+
+        self.pay_to(
+            token_contract_package_hash,
+            admin_address,
+            crate::address::Address::ContractPackage(bridge_pool_contract_package_hash),
+            amount,
+        );
+
+        let binding = token_contract_package_hash.to_string();
+        let token = binding.as_str();
+
+        if let Some(amount_in_pool) = self.admin_liquidities_dict.get::<U256>(token) {
+            self.admin_liquidities_dict.set(token, amount_in_pool + amount)
+            
+        } else {
+            self.admin_liquidities_dict.set(token, amount)
+        }
 
         Ok(())
     }
@@ -154,7 +189,7 @@ impl BridgePool {
         let client_string: String = TryInto::try_into(client_address)?;
         self.pay_from_me(token_contract_package_hash, client_address, amount);
         self.del_liquidity_generic_from_dict(
-            token_contract_package_hash.to_formatted_string(),
+            token_contract_package_hash.to_string(),
             client_string,
             amount,
             self.get_dict(client_address)?,
@@ -205,7 +240,7 @@ impl BridgePool {
         Ok(res)
     }
 
-    // function to swap tokens from different pools
+    // function to swap tokens from different pools from Casper Network
     pub fn swap(
         &self,
         from_address: Address,
@@ -237,6 +272,53 @@ impl BridgePool {
                 return Err(Error::NoTargetTokenInAllowedTargetsDict);
             }
             self.pay_me(token_contract_package_hash, from_address, amount);
+            Ok(())
+        } else {
+            Err(Error::NoTokenInTokenContractPackageHashDict)
+        }
+    }
+
+    // function to swap tokens from different pools to Casper Network
+    pub fn swap_reverse(
+        &self,
+        from_address: Address,
+        token_contract_package_hash: ContractPackageHash,
+        target_token: String,
+        amount: U256,
+        target_network: U256,
+    ) -> Result<(), Error> {
+        let token_contract_package_hash_string = token_contract_package_hash.to_string();
+        if let Some(token_name_from_dict) = self
+            .token_contract_package_hash_dict_name
+            .get::<String>(token_contract_package_hash_string.as_str())
+        {
+            if let Some(target_token_dict_address) = self
+                .allowed_targets_dict
+                .get::<String>(&(ALLOWED_TARGETS_DICT.to_owned() + token_name_from_dict.as_str()))
+            {
+                let target_token_dict = Dict::instance(target_token_dict_address.as_str());
+                if let Some(dict_target_token) =
+                    target_token_dict.get::<String>(&target_network.to_string())
+                {
+                    if dict_target_token != target_token {
+                        return Err(Error::DictTargetTokenNotEqualTargetToken);
+                    }
+                } else {
+                    return Err(Error::NoTargetNetworkDictForThisToken);
+                }
+            } else {
+                return Err(Error::NoTargetTokenInAllowedTargetsDict);
+            }
+
+            let client_string: String = TryInto::try_into(from_address)?;
+
+            self.add_liquidity_generic(
+                token_contract_package_hash.to_string(),
+                client_string,
+                amount,
+                self.get_dict(from_address)?,
+            );
+
             Ok(())
         } else {
             Err(Error::NoTokenInTokenContractPackageHashDict)
@@ -327,7 +409,7 @@ impl BridgePool {
         )
     }
 
-    fn pay_from_me(&self, token: ContractPackageHash, recipient: Address, amount: U256) {
+    pub fn pay_from_me(&self, token: ContractPackageHash, recipient: Address, amount: U256) {
         let args = runtime_args! {
             RECIPIENT => recipient,
             AMOUNT => amount
@@ -341,6 +423,22 @@ impl BridgePool {
             Address::ContractPackage(_) => Ok(&self.hash_addr_liquidities_dict),
             Address::ContractHash(_) => Err(Error::UnexpectedContractHash),
         }
+    }
+
+    // check if admin
+    fn is_admin(&self, candidate: Address) -> Result<(), Error> {
+        if let Address::Account(candidate_account_hash) = candidate {
+            let admin_address = runtime::get_key(ADMIN_ADDRESS)
+                .unwrap_or_revert_with(Error::MissingAccountHash)
+                .into_account()
+                .unwrap_or_revert_with(Error::InvalidAccountHash);
+            if admin_address != candidate_account_hash {
+                return Err(Error::NotAnAdmin)
+            }
+            Ok(())
+        } else {
+            Err(Error::NotAnAdmin)
+        } 
     }
 }
 
@@ -376,6 +474,17 @@ pub fn emit(event: &BridgePoolEvent) {
             param.insert(AMOUNT, amount.to_string());
             events.push(param);
         }
+        BridgePoolEvent::BridgeLiquidityAddedByAdmin {
+            token,
+            amount,
+        } => {
+            let mut param = BTreeMap::new();
+            param.insert(CONTRACT_PACKAGE_HASH, package.to_string());
+            param.insert(EVENT_TYPE, EVENT_BRIDGE_LIQUIDITY_ADDED_BY_ADMIN.to_string());
+            param.insert(TOKEN, token.to_string());
+            param.insert(AMOUNT, amount.to_string());
+            events.push(param);
+        }
         BridgePoolEvent::BridgeLiquidityRemoved {
             actor,
             token,
@@ -399,6 +508,23 @@ pub fn emit(event: &BridgePoolEvent) {
             let mut param = BTreeMap::new();
             param.insert(CONTRACT_PACKAGE_HASH, package.to_string());
             param.insert(EVENT_TYPE, EVENT_BRIDGE_SWAP.to_string());
+            param.insert(ACTOR, (*actor).try_into().unwrap());
+            param.insert(TOKEN, token.to_string());
+            param.insert(TARGET_NETWORK, target_network.to_string());
+            param.insert(TARGET_ADDRESS, target_address.clone());
+            param.insert(AMOUNT, amount.to_string());
+            events.push(param);
+        }
+        BridgePoolEvent::BridgeSwapTo {
+            actor,
+            token,
+            target_network,
+            target_address,
+            amount,
+        } => {
+            let mut param = BTreeMap::new();
+            param.insert(CONTRACT_PACKAGE_HASH, package.to_string());
+            param.insert(EVENT_TYPE, EVENT_BRIDGE_SWAP_TO.to_string());
             param.insert(ACTOR, (*actor).try_into().unwrap());
             param.insert(TOKEN, token.to_string());
             param.insert(TARGET_NETWORK, target_network.to_string());

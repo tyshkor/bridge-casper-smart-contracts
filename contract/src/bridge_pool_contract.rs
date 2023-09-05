@@ -77,6 +77,40 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
         Ok(())
     }
 
+    // outer function for admin to add liquidity to the pool
+    fn admin_add_liquidity(
+        &mut self,
+        amount: U256,
+        token_address: String,
+        bridge_pool_contract_package_hash_string: String,
+    ) -> Result<(), Error> {
+        let token_contract_package_hash =
+            ContractPackageHash::from_formatted_str(token_address.as_str())
+                .map_err(|_| Error::NotContractPackageHash)?;
+
+        let bridge_pool_contract_package_hash = ContractPackageHash::from_formatted_str(
+            bridge_pool_contract_package_hash_string.as_str(),
+        )
+        .map_err(|_| Error::NotBridgePoolContractPackageHash)?;
+
+        let admin_address = detail::get_immediate_caller_address()
+            .unwrap_or_revert_with(Error::ImmediateCallerFail);
+
+        let bridge_pool_instance = BridgePool::instance();
+        bridge_pool_instance.admin_add_liquidity(
+            bridge_pool_contract_package_hash,
+            token_contract_package_hash,
+            admin_address,
+            amount,
+        )?;
+
+        self.emit(BridgePoolEvent::BridgeLiquidityAddedByAdmin {
+            token: token_contract_package_hash,
+            amount,
+        });
+        Ok(())
+    }
+
     // outer function to remove liquidity from the pool
     fn remove_liquidity(&mut self, amount: U256, token_address: String) -> Result<(), Error> {
         let token_contract_package_hash =
@@ -101,7 +135,7 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
         Ok(())
     }
 
-    // outer function to swap liquidity
+    // outer function to swap liquidity from Casper Network
     fn swap(
         &mut self,
         token_address: String,
@@ -129,6 +163,34 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
         Ok(())
     }
 
+    // outer function to swap liquidity to Casper network
+    fn swap_reverse(
+        &mut self,
+        token_address: String,
+        amount: U256,
+        target_network: U256,
+        target_token: String,
+        target_address: String,
+    ) -> Result<(), Error> {
+        let actor = detail::get_immediate_caller_address()
+            .unwrap_or_revert_with(Error::ImmediateCallerFail);
+
+        let token = ContractPackageHash::from_formatted_str(token_address.as_str())
+            .map_err(|_| Error::NotContractPackageHash)?;
+
+        let bridge_pool_instance = BridgePool::instance();
+        bridge_pool_instance.swap_reverse(actor, token, target_token, amount, target_network)?;
+
+        self.emit(BridgePoolEvent::BridgeSwapTo {
+            actor,
+            token,
+            target_network,
+            target_address,
+            amount,
+        });
+        Ok(())
+    }
+
     // outer function to allow target
     fn allow_target(
         &mut self,
@@ -145,101 +207,158 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
         Ok(())
     }
 
-    // outer function to withdraw liquidity from the pool securely
+    // // outer function to withdraw liquidity from the pool securely
+    // #[allow(clippy::too_many_arguments)]
+    // #[inline(always)]
+    // fn withdraw_signed(
+    //     &mut self,
+    //     token_address: String,
+    //     payee: String,
+    //     amount: U256,
+    //     chain_id: u64,
+    //     salt: String,
+    //     caller: String,
+    //     signature: String,
+    //     receiver: String,
+    // ) -> Result<(), Error> {
+    //     let actor = detail::get_immediate_caller_address()
+    //         .unwrap_or_revert_with(Error::ImmediateCallerFail);
+
+    //     let client_address_string: String = actor.try_into()?;
+
+    //     if receiver != client_address_string {
+    //         return Err(Error::WrongCaller);
+    //     }
+
+    //     let token = ContractPackageHash::from_formatted_str(token_address.as_str())
+    //         .map_err(|_| Error::NotContractPackageHash)?;
+
+    //     let bridge_pool_instance = BridgePool::instance();
+
+    //     let signature = hex::decode(signature).unwrap();
+
+    //     let salt: [u8; 32] = hex::decode(salt)
+    //         .map_err(|_| Error::SaltHexFail)?
+    //         .try_into()
+    //         .map_err(|_| Error::SaltWrongSize)?;
+
+    //     let message_hash = hex::encode(keccak256(
+    //         hex::encode(keccak256(
+    //             &[
+    //                 token.to_formatted_string().as_bytes(),
+    //                 payee.as_bytes(),
+    //                 amount.to_string().as_bytes(),
+    //                 caller.as_bytes(),
+    //                 receiver.as_bytes(),
+    //                 &chain_id.to_be_bytes(),
+    //                 &salt,
+    //             ]
+    //             .concat()[..],
+    //         ))
+    //         .as_bytes(),
+    //     ));
+
+    //     let signature_rec = if signature.len() == 65 {
+    //         RecoverableSignature::from_bytes(&signature[..])
+    //             .map_err(|_| Error::RecoverableSignatureTryFromFail)?
+    //     } else {
+    //         NonRecoverableSignature::from_bytes(&signature[..])
+    //             .map_err(|_| Error::NonRecoverableSignatureTryFromFail)?
+    //     };
+
+    //     let hash =
+    //         &hex::decode(message_hash.clone()).map_err(|_| Error::MessageHashHexDecodingFail)?[..];
+    //     let sig = &signature_rec;
+
+    //     let s = Secp256k1::new();
+    //     let msg = Message::from_slice(hash).unwrap();
+    //     let mut sig_compact: Vec<u8> = sig.r().to_bytes().to_vec();
+    //     sig_compact.extend(&sig.s().to_bytes().to_vec());
+    //     let id_u8: u8 = From::from(sig.recovery_id());
+    //     let sig_v = secp256k1::ecdsa::RecoveryId::from_i32(id_u8 as i32).unwrap();
+    //     let rec_sig =
+    //         secp256k1::ecdsa::RecoverableSignature::from_compact(&sig_compact, sig_v).unwrap();
+    //     let pub_key = s.recover_ecdsa(&msg, &rec_sig).unwrap();
+    //     let public_key = Vec::from(&keccak256_hash(&pub_key.serialize_uncompressed()[1..])[12..]);
+
+    //     if bridge_pool_instance
+    //         .used_hashes_dict
+    //         .get::<bool>(message_hash.as_str())
+    //         .is_some()
+    //     {
+    //         return Err(Error::MessageAlreadyUsed);
+    //     } else {
+    //         bridge_pool_instance
+    //             .used_hashes_dict
+    //             .set(message_hash.as_str(), true);
+    //     }
+
+    //     let signer = hex::encode(public_key);
+
+    //     if !bridge_pool_instance
+    //         .signers_dict
+    //         .get::<bool>(&signer)
+    //         .ok_or(Error::NoValueInSignersDict)?
+    //     {
+    //         return Err(Error::InvalidSigner);
+    //     }
+
+    //     runtime::call_versioned_contract::<()>(
+    //         token,
+    //         None,
+    //         ERC20_ENTRY_POINT_TRANSFER,
+    //         runtime_args! {
+    //             RECIPIENT => actor,
+    //             AMOUNT => amount
+    //         },
+    //     );
+
+    //     let dict = match actor {
+    //         Address::Account(_) => &bridge_pool_instance.account_hash_liquidities_dict,
+    //         Address::ContractPackage(_) => &bridge_pool_instance.hash_addr_liquidities_dict,
+    //         Address::ContractHash(_) => return Err(Error::UnexpectedContractHash),
+    //     };
+
+    //     let client = actor.as_account_hash().unwrap().to_string();
+
+    //     let clients_dict_address = dict
+    //         .get::<String>(token.to_string().as_str())
+    //         .ok_or(Error::ClientDoesNotHaveAnyKindOfLiquidity)?;
+    //     let clients_dict = Dict::instance(clients_dict_address.as_str());
+    //     let client_amount = clients_dict
+    //         .get::<U256>(client.as_str())
+    //         .ok_or(Error::ClientDoesNotHaveSpecificKindOfLiquidity)?;
+    //     let new_amount = client_amount
+    //         .checked_sub(amount)
+    //         .ok_or(Error::CheckedSubFail)?;
+    //     clients_dict.set(client.as_str(), new_amount);
+
+    //     self.emit(BridgePoolEvent::TransferBySignature {
+    //         signer,
+    //         receiver,
+    //         token,
+    //         amount,
+    //     });
+    //     Ok(())
+    // }
+
+    // outer function to withdraw liquidity from the pool
     #[allow(clippy::too_many_arguments)]
     #[inline(always)]
-    fn withdraw_signed(
+    fn withdraw(
         &mut self,
         token_address: String,
-        payee: String,
         amount: U256,
-        chain_id: u64,
-        salt: String,
-        caller: String,
-        signature: String,
-        receiver: String,
     ) -> Result<(), Error> {
         let actor = detail::get_immediate_caller_address()
             .unwrap_or_revert_with(Error::ImmediateCallerFail);
 
         let client_address_string: String = actor.try_into()?;
 
-        if receiver != client_address_string {
-            return Err(Error::WrongCaller);
-        }
-
         let token = ContractPackageHash::from_formatted_str(token_address.as_str())
             .map_err(|_| Error::NotContractPackageHash)?;
 
         let bridge_pool_instance = BridgePool::instance();
-
-        let signature = hex::decode(signature).unwrap();
-
-        let salt: [u8; 32] = hex::decode(salt)
-            .map_err(|_| Error::SaltHexFail)?
-            .try_into()
-            .map_err(|_| Error::SaltWrongSize)?;
-
-        let message_hash = hex::encode(keccak256(
-            hex::encode(keccak256(
-                &[
-                    token.to_formatted_string().as_bytes(),
-                    payee.as_bytes(),
-                    amount.to_string().as_bytes(),
-                    caller.as_bytes(),
-                    receiver.as_bytes(),
-                    &chain_id.to_be_bytes(),
-                    &salt,
-                ]
-                .concat()[..],
-            ))
-            .as_bytes(),
-        ));
-
-        let signature_rec = if signature.len() == 65 {
-            RecoverableSignature::from_bytes(&signature[..])
-                .map_err(|_| Error::RecoverableSignatureTryFromFail)?
-        } else {
-            NonRecoverableSignature::from_bytes(&signature[..])
-                .map_err(|_| Error::NonRecoverableSignatureTryFromFail)?
-        };
-
-        let hash =
-            &hex::decode(message_hash.clone()).map_err(|_| Error::MessageHashHexDecodingFail)?[..];
-        let sig = &signature_rec;
-
-        let s = Secp256k1::new();
-        let msg = Message::from_slice(hash).unwrap();
-        let mut sig_compact: Vec<u8> = sig.r().to_bytes().to_vec();
-        sig_compact.extend(&sig.s().to_bytes().to_vec());
-        let id_u8: u8 = From::from(sig.recovery_id());
-        let sig_v = secp256k1::ecdsa::RecoveryId::from_i32(id_u8 as i32).unwrap();
-        let rec_sig =
-            secp256k1::ecdsa::RecoverableSignature::from_compact(&sig_compact, sig_v).unwrap();
-        let pub_key = s.recover_ecdsa(&msg, &rec_sig).unwrap();
-        let public_key = Vec::from(&keccak256_hash(&pub_key.serialize_uncompressed()[1..])[12..]);
-
-        if bridge_pool_instance
-            .used_hashes_dict
-            .get::<bool>(message_hash.as_str())
-            .is_some()
-        {
-            return Err(Error::MessageAlreadyUsed);
-        } else {
-            bridge_pool_instance
-                .used_hashes_dict
-                .set(message_hash.as_str(), true);
-        }
-
-        let signer = hex::encode(public_key);
-
-        if !bridge_pool_instance
-            .signers_dict
-            .get::<bool>(&signer)
-            .ok_or(Error::NoValueInSignersDict)?
-        {
-            return Err(Error::InvalidSigner);
-        }
 
         runtime::call_versioned_contract::<()>(
             token,
@@ -260,23 +379,32 @@ pub trait BridgePoolContract<Storage: ContractStorage>: ContractContext<Storage>
         let client = actor.as_account_hash().unwrap().to_string();
 
         let clients_dict_address = dict
-            .get::<String>(token.to_formatted_string().as_str())
+            .get::<String>(token.to_string().as_str())
             .ok_or(Error::ClientDoesNotHaveAnyKindOfLiquidity)?;
         let clients_dict = Dict::instance(clients_dict_address.as_str());
         let client_amount = clients_dict
             .get::<U256>(client.as_str())
             .ok_or(Error::ClientDoesNotHaveSpecificKindOfLiquidity)?;
-        let new_amount = client_amount
+        let client_new_amount = client_amount
             .checked_sub(amount)
             .ok_or(Error::CheckedSubFail)?;
-        clients_dict.set(client.as_str(), new_amount);
+        clients_dict.set(client.as_str(), client_new_amount);
+        
+        let old_amount = bridge_pool_instance.admin_liquidities_dict
+            .get::<U256>(token.to_string().as_str())
+            .ok_or(Error::AdminDoesNotHaveSpecificKindOfLiquidity)?;
+        let new_amount = old_amount
+            .checked_sub(amount)
+            .ok_or(Error::CheckedSubFail)?;
 
-        self.emit(BridgePoolEvent::TransferBySignature {
-            signer,
-            receiver,
-            token,
-            amount,
-        });
+        bridge_pool_instance.admin_liquidities_dict.set(token.to_string().as_str(), new_amount);
+
+        // self.emit(BridgePoolEvent::TransferBySignature {
+        //     signer,
+        //     receiver,
+        //     token,
+        //     amount,
+        // });
         Ok(())
     }
 
